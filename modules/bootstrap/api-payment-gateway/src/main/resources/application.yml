@@ -1,4 +1,8 @@
 spring:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   datasource:
     url: jdbc:h2:mem:pgdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
@@ -17,3 +21,8 @@ spring:
 server:
   port: 8080
 
+pg:
+  test:
+    base-url: ${TEST_PG_BASE_URL:https://api-test-pg.bigs.im}
+    api-key: ${TEST_PG_API_KEY:11111111-1111-4111-8111-111111111111}
+    iv: ${TEST_PG_IV:AAAAAAAAAAAAAAAA}
