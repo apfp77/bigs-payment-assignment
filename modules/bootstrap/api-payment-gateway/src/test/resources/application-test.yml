@@ -1,0 +1,27 @@
+spring:
+  h2:
+    console:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc.time_zone: UTC
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# Mock PG 사용 (TestPg API 호출 안 함)
+pg:
+  test:
+    base-url: http://localhost:9999
+    api-key: test-api-key
+    iv: AAAAAAAAAAAAAAAA
