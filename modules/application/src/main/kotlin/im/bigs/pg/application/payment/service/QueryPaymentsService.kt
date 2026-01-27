@@ -8,11 +8,11 @@ import im.bigs.pg.application.payment.port.out.PaymentQuery
 import im.bigs.pg.application.payment.port.out.PaymentSummaryFilter
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.domain.payment.PaymentSummary
+import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.Base64
-import org.springframework.stereotype.Service
 
 /**
  * 결제 이력 조회 유스케이스 구현체.
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service
  */
 @Service
 class QueryPaymentsService(
-        private val paymentRepository: PaymentOutPort,
+    private val paymentRepository: PaymentOutPort,
 ) : QueryPaymentsUseCase {
 
     /**
@@ -39,41 +39,41 @@ class QueryPaymentsService(
 
         // 3. 페이징 조회
         val query =
-                PaymentQuery(
-                        partnerId = filter.partnerId,
-                        status = status,
-                        from = filter.from,
-                        to = filter.to,
-                        cursorCreatedAt = cursorCreatedAt,
-                        cursorId = cursorId,
-                        limit = filter.limit,
-                )
+            PaymentQuery(
+                partnerId = filter.partnerId,
+                status = status,
+                from = filter.from,
+                to = filter.to,
+                cursorCreatedAt = cursorCreatedAt,
+                cursorId = cursorId,
+                limit = filter.limit,
+            )
         val page = paymentRepository.findBy(query)
 
         // 4. 통계 조회 (페이징과 무관, 전체 집합)
         val summaryFilter =
-                PaymentSummaryFilter(
-                        partnerId = filter.partnerId,
-                        status = status,
-                        from = filter.from,
-                        to = filter.to,
-                )
+            PaymentSummaryFilter(
+                partnerId = filter.partnerId,
+                status = status,
+                from = filter.from,
+                to = filter.to,
+            )
         val summaryProjection = paymentRepository.summary(summaryFilter)
 
         // 5. 결과 조립
         return QueryResult(
-                items = page.items,
-                summary =
-                        PaymentSummary(
-                                count = summaryProjection.count,
-                                totalAmount = summaryProjection.totalAmount,
-                                totalNetAmount = summaryProjection.totalNetAmount,
-                        ),
-                nextCursor =
-                        if (page.hasNext) {
-                            encodeCursor(page.nextCursorCreatedAt, page.nextCursorId)
-                        } else null,
-                hasNext = page.hasNext,
+            items = page.items,
+            summary =
+            PaymentSummary(
+                count = summaryProjection.count,
+                totalAmount = summaryProjection.totalAmount,
+                totalNetAmount = summaryProjection.totalNetAmount,
+            ),
+            nextCursor =
+            if (page.hasNext) {
+                encodeCursor(page.nextCursorCreatedAt, page.nextCursorId)
+            } else null,
+            hasNext = page.hasNext,
         )
     }
 

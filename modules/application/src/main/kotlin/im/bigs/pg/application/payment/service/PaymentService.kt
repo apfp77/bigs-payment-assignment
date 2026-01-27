@@ -28,10 +28,10 @@ import org.springframework.stereotype.Service
  */
 @Service
 class PaymentService(
-        private val partnerRepository: PartnerOutPort,
-        private val feePolicyRepository: FeePolicyOutPort,
-        private val paymentRepository: PaymentOutPort,
-        private val pgClients: List<PgClientOutPort>,
+    private val partnerRepository: PartnerOutPort,
+    private val feePolicyRepository: FeePolicyOutPort,
+    private val paymentRepository: PaymentOutPort,
+    private val pgClients: List<PgClientOutPort>,
 ) : PaymentUseCase {
 
     /**
@@ -53,54 +53,54 @@ class PaymentService(
     override fun pay(command: PaymentCommand): Payment {
         // 1. 제휴사 검증
         val partner =
-                partnerRepository.findById(command.partnerId)
-                        ?: throw PartnerNotFoundException(command.partnerId)
+            partnerRepository.findById(command.partnerId)
+                ?: throw PartnerNotFoundException(command.partnerId)
         if (!partner.active) {
             throw PartnerInactiveException(partner.id)
         }
 
         // 2. 수수료 정책 조회
         val policy =
-                feePolicyRepository.findEffectivePolicy(partner.id)
-                        ?: throw FeePolicyNotFoundException(partner.id)
+            feePolicyRepository.findEffectivePolicy(partner.id)
+                ?: throw FeePolicyNotFoundException(partner.id)
 
         // 3. PG 승인
         val pgClient =
-                pgClients.firstOrNull { it.supports(partner.id) }
-                        ?: throw PgClientNotFoundException(partner.id)
+            pgClients.firstOrNull { it.supports(partner.id) }
+                ?: throw PgClientNotFoundException(partner.id)
         val approve =
-                pgClient.approve(
-                        PgApproveRequest(
-                                partnerId = partner.id,
-                                amount = command.amount,
-                                cardBin = command.cardBin,
-                                cardLast4 = command.cardLast4,
-                                productName = command.productName,
-                        ),
-                )
+            pgClient.approve(
+                PgApproveRequest(
+                    partnerId = partner.id,
+                    amount = command.amount,
+                    cardBin = command.cardBin,
+                    cardLast4 = command.cardLast4,
+                    productName = command.productName,
+                ),
+            )
 
         // 4. 수수료 계산 (정책 기반)
         val (fee, net) =
-                FeeCalculator.calculateFee(
-                        command.amount,
-                        policy.percentage,
-                        policy.fixedFee,
-                )
+            FeeCalculator.calculateFee(
+                command.amount,
+                policy.percentage,
+                policy.fixedFee,
+            )
 
         // 5. 결제 저장
         val payment =
-                Payment(
-                        partnerId = partner.id,
-                        amount = command.amount,
-                        appliedFeeRate = policy.percentage,
-                        feeAmount = fee,
-                        netAmount = net,
-                        cardBin = command.cardBin,
-                        cardLast4 = command.cardLast4,
-                        approvalCode = approve.approvalCode,
-                        approvedAt = approve.approvedAt,
-                        status = PaymentStatus.APPROVED,
-                )
+            Payment(
+                partnerId = partner.id,
+                amount = command.amount,
+                appliedFeeRate = policy.percentage,
+                feeAmount = fee,
+                netAmount = net,
+                cardBin = command.cardBin,
+                cardLast4 = command.cardLast4,
+                approvalCode = approve.approvalCode,
+                approvedAt = approve.approvedAt,
+                status = PaymentStatus.APPROVED,
+            )
 
         return paymentRepository.save(payment)
     }

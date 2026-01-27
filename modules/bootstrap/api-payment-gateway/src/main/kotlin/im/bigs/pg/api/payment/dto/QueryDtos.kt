@@ -12,8 +12,8 @@ data class QueryResponse(
     val summary: Summary,
 
     @get:Schema(
-            description = "다음 페이지 커서 (다음 페이지가 없으면 null)",
-            example = "MjAyNS0wMS0yN1QxMDowMDowMF8x"
+        description = "다음 페이지 커서 (다음 페이지가 없으면 null)",
+        example = "MjAyNS0wMS0yN1QxMDowMDowMF8x"
     )
     val nextCursor: String?,
 

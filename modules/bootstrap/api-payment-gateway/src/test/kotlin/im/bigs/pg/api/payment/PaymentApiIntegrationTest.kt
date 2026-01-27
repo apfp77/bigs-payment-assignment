@@ -97,17 +97,17 @@ class PaymentApiIntegrationTest {
     @DisplayName("결제 생성이 성공해야 한다")
     fun `결제 생성이 성공해야 한다`() {
         val request = CreatePaymentRequest(
-                partnerId = testPartnerId,
-                amount = BigDecimal("10000"),
-                cardBin = "123456",
-                cardLast4 = "4242",
-                productName = "테스트 상품",
+            partnerId = testPartnerId,
+            amount = BigDecimal("10000"),
+            cardBin = "123456",
+            cardLast4 = "4242",
+            productName = "테스트 상품",
         )
 
         val response = restTemplate.postForEntity(
-                "/api/v1/payments",
-                request,
-                PaymentResponse::class.java,
+            "/api/v1/payments",
+            request,
+            PaymentResponse::class.java,
         )
 
         assertEquals(HttpStatus.OK, response.statusCode)

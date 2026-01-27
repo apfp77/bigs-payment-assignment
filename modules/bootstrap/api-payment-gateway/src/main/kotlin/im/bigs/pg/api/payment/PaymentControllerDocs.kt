@@ -11,8 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
-import java.time.LocalDateTime
 import org.springframework.http.ResponseEntity
+import java.time.LocalDateTime
 
 /** 결제 API 문서 인터페이스. */
 @Tag(name = "Payment", description = "결제 생성 및 조회 API")
@@ -32,84 +32,89 @@ interface PaymentControllerDocs {
      * @throws PgRejectedException PG에서 결제를 거절한 경우 (422)
      */
     @Operation(
-            summary = "결제 생성",
-            description = "제휴사 ID와 결제 금액을 받아 PG 승인 후 결제를 생성합니다. 수수료 정책이 자동으로 적용됩니다."
+        summary = "결제 생성",
+        description = "제휴사 ID와 결제 금액을 받아 PG 승인 후 결제를 생성합니다. 수수료 정책이 자동으로 적용됩니다."
     )
     @ApiResponses(
-            value =
-                    [
-                            ApiResponse(
-                                    responseCode = "200",
-                                    description = "결제 생성 성공",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    PaymentResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                            ApiResponse(
-                                    responseCode = "400",
-                                    description = "잘못된 요청 - PartnerInactiveException: 비활성 제휴사",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    ErrorResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                            ApiResponse(
-                                    responseCode = "404",
-                                    description = "리소스 없음 - PartnerNotFoundException: 제휴사를 찾을 수 없음",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    ErrorResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                            ApiResponse(
-                                    responseCode = "422",
-                                    description = "처리 불가 - PgRejectedException: PG 승인 거부",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    ErrorResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                            ApiResponse(
-                                    responseCode = "500",
-                                    description =
-                                            "서버 오류 - FeePolicyNotFoundException, PgClientNotFoundException 등",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    ErrorResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                    ]
+        value =
+        [
+            ApiResponse(
+                responseCode = "200",
+                description = "결제 생성 성공",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            PaymentResponse::class
+                        )
+                    )
+                ]
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "잘못된 요청 - PartnerInactiveException: 비활성 제휴사",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            ErrorResponse::class
+                        )
+                    )
+                ]
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "리소스 없음 - PartnerNotFoundException: 제휴사를 찾을 수 없음",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            ErrorResponse::class
+                        )
+                    )
+                ]
+            ),
+            ApiResponse(
+                responseCode = "422",
+                description = "처리 불가 - PgRejectedException: PG 승인 거부",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            ErrorResponse::class
+                        )
+                    )
+                ]
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description =
+                "서버 오류 - FeePolicyNotFoundException, PgClientNotFoundException 등",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            ErrorResponse::class
+                        )
+                    )
+                ]
+            ),
+        ]
     )
     fun create(req: CreatePaymentRequest): ResponseEntity<PaymentResponse>
 
@@ -127,34 +132,35 @@ interface PaymentControllerDocs {
      * @return 결제 목록, 통계, 페이지 정보
      */
     @Operation(
-            summary = "결제 조회",
-            description = "결제 이력을 조회합니다. 커서 기반 페이지네이션과 필터링을 지원하며, 전체 통계(summary)를 함께 반환합니다."
+        summary = "결제 조회",
+        description = "결제 이력을 조회합니다. 커서 기반 페이지네이션과 필터링을 지원하며, 전체 통계(summary)를 함께 반환합니다."
     )
     @ApiResponses(
-            value =
-                    [
-                            ApiResponse(
-                                    responseCode = "200",
-                                    description = "조회 성공",
-                                    content =
-                                            [
-                                                    Content(
-                                                            mediaType = "application/json",
-                                                            schema =
-                                                                    Schema(
-                                                                            implementation =
-                                                                                    QueryResponse::class
-                                                                    )
-                                                    )]
-                            ),
-                    ]
+        value =
+        [
+            ApiResponse(
+                responseCode = "200",
+                description = "조회 성공",
+                content =
+                [
+                    Content(
+                        mediaType = "application/json",
+                        schema =
+                        Schema(
+                            implementation =
+                            QueryResponse::class
+                        )
+                    )
+                ]
+            ),
+        ]
     )
     fun query(
-            @Parameter(description = "제휴사 ID 필터") partnerId: Long?,
-            @Parameter(description = "결제 상태 필터 (APPROVED, CANCELED 등)") status: String?,
-            @Parameter(description = "조회 시작 시각 (yyyy-MM-dd HH:mm:ss)") from: LocalDateTime?,
-            @Parameter(description = "조회 종료 시각 (yyyy-MM-dd HH:mm:ss)") to: LocalDateTime?,
-            @Parameter(description = "다음 페이지 커서 (이전 응답의 nextCursor 값)") cursor: String?,
-            @Parameter(description = "페이지 크기", example = "20") limit: Int,
+        @Parameter(description = "제휴사 ID 필터") partnerId: Long?,
+        @Parameter(description = "결제 상태 필터 (APPROVED, CANCELED 등)") status: String?,
+        @Parameter(description = "조회 시작 시각 (yyyy-MM-dd HH:mm:ss)") from: LocalDateTime?,
+        @Parameter(description = "조회 종료 시각 (yyyy-MM-dd HH:mm:ss)") to: LocalDateTime?,
+        @Parameter(description = "다음 페이지 커서 (이전 응답의 nextCursor 값)") cursor: String?,
+        @Parameter(description = "페이지 크기", example = "20") limit: Int,
     ): ResponseEntity<QueryResponse>
 }

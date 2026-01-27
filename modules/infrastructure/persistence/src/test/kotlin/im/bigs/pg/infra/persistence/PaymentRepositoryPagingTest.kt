@@ -16,7 +16,10 @@ import kotlin.test.assertTrue
 
 @DataJpaTest
 @ContextConfiguration(classes = [JpaConfig::class])
-class 결제저장소커서페이징Test @Autowired constructor(
+@DisplayName("결제저장소커서페이징Test")
+class PaymentRepositoryPagingTest
+@Autowired
+constructor(
     val paymentRepo: PaymentJpaRepository,
 ) {
     @Test
@@ -42,13 +45,20 @@ class 결제저장소커서페이징Test @Autowired constructor(
             )
         }
 
-        val first = paymentRepo.pageBy(1L, "APPROVED", null, null, null, null, PageRequest.of(0, 21))
+        val first =
+            paymentRepo.pageBy(1L, "APPROVED", null, null, null, null, PageRequest.of(0, 21))
         assertEquals(21, first.size)
         val lastOfFirst = first[20]
-        val second = paymentRepo.pageBy(
-            1L, "APPROVED", null, null,
-            lastOfFirst.createdAt, lastOfFirst.id, PageRequest.of(0, 21),
-        )
+        val second =
+            paymentRepo.pageBy(
+                1L,
+                "APPROVED",
+                null,
+                null,
+                lastOfFirst.createdAt,
+                lastOfFirst.id,
+                PageRequest.of(0, 21),
+            )
         assertTrue(second.isNotEmpty())
 
         val sumList = paymentRepo.summary(1L, "APPROVED", null, null)

@@ -22,4 +22,3 @@ data class CreatePaymentRequest(
     @get:Schema(description = "상품명", example = "테스트 상품")
     val productName: String? = null,
 )
-
