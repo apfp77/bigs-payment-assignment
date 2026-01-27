@@ -13,6 +13,7 @@ dependencies {
     implementation(projects.modules.external.pgClient)
     implementation(libs.spring.boot.starter.jpa)
     implementation(libs.bundles.bootstrap)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
     testImplementation(libs.bundles.test)
     testImplementation(libs.spring.boot.starter.test) {
         exclude(module = "mockito-core")
