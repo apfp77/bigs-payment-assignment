@@ -1,13 +1,19 @@
 package im.bigs.pg.api.payment
 
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
+import im.bigs.pg.api.payment.dto.MockPgCardData
+import im.bigs.pg.api.payment.dto.NewPgCardData
 import im.bigs.pg.api.payment.dto.PaymentResponse
 import im.bigs.pg.api.payment.dto.QueryResponse
 import im.bigs.pg.api.payment.dto.Summary
+import im.bigs.pg.api.payment.dto.TestPgCardData
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
 import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
 import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
+import im.bigs.pg.application.pg.port.out.MockPgCardDataDto
+import im.bigs.pg.application.pg.port.out.NewPgCardDataDto
+import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -30,14 +36,26 @@ class PaymentController(
 
     @PostMapping
     override fun create(@RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
+        val pgCardDataDto =
+            when (val data = req.pgCardData) {
+                is MockPgCardData ->
+                    MockPgCardDataDto(data.cardBin, data.cardLast4, data.productName)
+                is TestPgCardData ->
+                    TestPgCardDataDto(
+                        data.cardNumber,
+                        data.birthDate,
+                        data.expiry,
+                        data.cardPassword
+                    )
+                is NewPgCardData ->
+                    NewPgCardDataDto(data.encryptedCardToken, data.merchantId, data.orderId)
+            }
         val saved =
             paymentUseCase.pay(
                 PaymentCommand(
                     partnerId = req.partnerId,
                     amount = req.amount,
-                    cardBin = req.cardBin,
-                    cardLast4 = req.cardLast4,
-                    productName = req.productName,
+                    pgCardData = pgCardDataDto,
                 ),
             )
         return ResponseEntity.ok(PaymentResponse.from(saved))
