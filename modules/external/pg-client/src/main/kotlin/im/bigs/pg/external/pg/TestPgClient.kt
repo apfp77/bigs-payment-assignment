@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.external.pg.config.TestPgProperties
 import im.bigs.pg.external.pg.crypto.AesGcmCrypto
@@ -29,7 +30,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * TestPg API 연동 클라이언트. 짝수 partnerId를 지원합니다 (홀수는 MockPgClient가 처리).
+ * TestPg API 연동 클라이언트. partnerId=2를 지원합니다.
  *
  * - AES-256-GCM 암호화로 요청 본문 보호
  * - 민감정보 로깅 금지
@@ -47,18 +48,22 @@ class TestPgClient(
     private val key = AesGcmCrypto.deriveKey(props.apiKey)
     private val iv = AesGcmCrypto.decodeIv(props.iv)
 
-    override fun supports(partnerId: Long): Boolean = partnerId % 2L == 0L
+    override fun supports(partnerId: Long): Boolean = partnerId == 2L
 
     override fun approve(request: PgApproveRequest): PgApproveResult {
         log.info("TestPg request: partnerId={}, amount={}", request.partnerId, request.amount)
 
-        // 1. 평문 페이로드 생성 (테스트용 고정 카드정보 사용)
+        // 1. pgCardData에서 카드정보 추출
+        val cardData =
+            request.pgCardData as? TestPgCardDataDto
+                ?: error("TestPgCardDataDto is required for TestPg")
+
         val payload =
             TestPgPayload(
-                cardNumber = "1111-1111-1111-1111",
-                birthDate = "19900101",
-                expiry = "1227",
-                password = "12",
+                cardNumber = cardData.cardNumber,
+                birthDate = cardData.birthDate,
+                expiry = cardData.expiry,
+                password = cardData.cardPassword,
                 amount = request.amount.toLong(),
             )
 
@@ -85,6 +90,11 @@ class TestPgClient(
 
             log.info("TestPg success: approvalCode={}", response.approvalCode)
 
+            // cardNumber에서 cardBin/cardLast4 추출
+            val cleanedCardNumber = cardData.cardNumber.replace("-", "")
+            val cardBin = cleanedCardNumber.take(6)
+            val cardLast4 = cleanedCardNumber.takeLast(4)
+
             PgApproveResult(
                 approvalCode = response.approvalCode,
                 approvedAt =
@@ -93,6 +103,8 @@ class TestPgClient(
                     DateTimeFormatter.ISO_LOCAL_DATE_TIME
                 ),
                 status = PaymentStatus.APPROVED,
+                cardBin = cardBin,
+                cardLast4 = cardLast4,
             )
         } catch (e: HttpClientErrorException) {
             handleClientError(e)
@@ -110,7 +122,10 @@ class TestPgClient(
             }
             HttpStatus.UNPROCESSABLE_ENTITY -> {
                 val errorBody =
-                    objectMapper.readValue(e.responseBodyAsString, TestPgErrorResponse::class.java)
+                    objectMapper.readValue(
+                        e.responseBodyAsString,
+                        TestPgErrorResponse::class.java
+                    )
                 log.warn(
                     "TestPg rejected: errorCode={}, message={}",
                     errorBody.errorCode,
