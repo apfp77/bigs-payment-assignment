@@ -1,6 +1,7 @@
 package im.bigs.pg.api.config
 
 import im.bigs.pg.domain.exception.FeePolicyNotFoundException
+import im.bigs.pg.domain.exception.InvalidPgCardDataException
 import im.bigs.pg.domain.exception.PartnerInactiveException
 import im.bigs.pg.domain.exception.PartnerNotFoundException
 import im.bigs.pg.domain.exception.PaymentException
@@ -17,11 +18,15 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(PartnerNotFoundException::class)
     fun handle(e: PartnerNotFoundException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(ErrorResponse(e.errorCode, e.message))
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse(e.errorCode, e.message))
 
     @ExceptionHandler(PartnerInactiveException::class)
     fun handle(e: PartnerInactiveException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse(e.errorCode, e.message))
+
+    @ExceptionHandler(InvalidPgCardDataException::class)
+    fun handle(e: InvalidPgCardDataException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse(e.errorCode, e.message))
 
