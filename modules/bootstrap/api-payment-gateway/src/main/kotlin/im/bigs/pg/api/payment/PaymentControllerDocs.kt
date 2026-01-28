@@ -7,7 +7,6 @@ import im.bigs.pg.api.payment.dto.QueryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -130,61 +129,11 @@ interface PaymentControllerDocs {
     )
     @RequestBody(
         required = true,
-        content = [
+        content =
+        [
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = CreatePaymentRequest::class),
-                examples = [
-                    ExampleObject(
-                        name = "MOCK",
-                        summary = "MockPG (partnerId=1)",
-                        value = """
-                    {
-                      "partnerId": 1,
-                      "amount": 1000,
-                      "pgCardData": {
-                        "type": "MOCK",
-                        "cardBin": "123456",
-                        "cardLast4": "4242",
-                        "productName": "테스트 상품"
-                      }
-                    }
-                    """
-                    ),
-                    ExampleObject(
-                        name = "TEST_PG",
-                        summary = "TestPG (partnerId=2)",
-                        value = """
-                    {
-                      "partnerId": 2,
-                      "amount": 1000,
-                      "pgCardData": {
-                        "type": "TEST_PG",
-                        "cardNumber": "1111-1111-1111-1111",
-                        "birthDate": "19900101",
-                        "expiry": "1227",
-                        "cardPassword": "12"
-                      }
-                    }
-                    """
-                    ),
-                    ExampleObject(
-                        name = "NEW_PG",
-                        summary = "NewPG (partnerId=3)",
-                        value = """
-                    {
-                      "partnerId": 3,
-                      "amount": 1000,
-                      "pgCardData": {
-                        "type": "NEW_PG",
-                        "encryptedCardToken": "enc_token_xxx",
-                        "merchantId": "M001",
-                        "orderId": "ORD-001"
-                      }
-                    }
-                    """
-                    )
-                ]
             )
         ]
     )
