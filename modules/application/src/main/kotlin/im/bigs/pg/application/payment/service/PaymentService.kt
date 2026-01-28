@@ -5,10 +5,14 @@ import im.bigs.pg.application.partner.port.out.PartnerOutPort
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
 import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
+import im.bigs.pg.application.pg.port.out.MockPgCardDataDto
+import im.bigs.pg.application.pg.port.out.NewPgCardDataDto
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.exception.FeePolicyNotFoundException
+import im.bigs.pg.domain.exception.InvalidPgCardDataException
 import im.bigs.pg.domain.exception.PartnerInactiveException
 import im.bigs.pg.domain.exception.PartnerNotFoundException
 import im.bigs.pg.domain.exception.PgClientNotFoundException
@@ -19,12 +23,12 @@ import org.springframework.stereotype.Service
 /**
  * 결제 생성 유스케이스 구현체.
  *
- * 입력(REST 등) → 도메인/외부PG/영속성 포트를 순차적으로 호출하는 흐름을 담당합니다. 수수료 정책 조회 및 적용(계산)은 도메인 유틸리티를 통해 수행합니다.
+ * 제휴사 검증, 수수료 정책 조회, PG 승인 요청, 결제 저장까지의 전체 플로우를 처리합니다.
  *
  * @property partnerRepository 제휴사 조회 포트
  * @property feePolicyRepository 수수료 정책 조회 포트
  * @property paymentRepository 결제 저장 포트
- * @property pgClients 외부 PG 클라이언트 목록
+ * @property pgClients PG 클라이언트 목록
  */
 @Service
 class PaymentService(
@@ -38,17 +42,20 @@ class PaymentService(
      * 결제를 생성합니다.
      *
      * 1. 제휴사 검증 (존재 여부, 활성 상태)
-     * 2. 수수료 정책 조회 (effective_from 기준 최신)
-     * 3. PG 승인 요청
-     * 4. 수수료 계산 (정책 기반)
-     * 5. 결제 저장
+     * 2. 수수료 정책 조회
+     * 3. PG 클라이언트 조회
+     * 4. pgCardData 타입 검증
+     * 5. PG 승인 요청 (cardBin/cardLast4 포함)
+     * 6. 수수료 계산
+     * 7. 결제 저장
      *
-     * @param command 결제 생성 커맨드
-     * @return 저장된 결제 정보
-     * @throws PartnerNotFoundException 제휴사를 찾을 수 없는 경우
+     * @param command 결제 생성 명령 (partnerId, amount, pgCardData)
+     * @return PG 승인 성공 후 저장된 결제 엔티티
+     * @throws PartnerNotFoundException 제휴사가 존재하지 않는 경우
      * @throws PartnerInactiveException 제휴사가 비활성 상태인 경우
-     * @throws FeePolicyNotFoundException 수수료 정책이 없는 경우
-     * @throws PgClientNotFoundException PG 클라이언트를 찾을 수 없는 경우
+     * @throws FeePolicyNotFoundException 유효한 수수료 정책이 없는 경우
+     * @throws PgClientNotFoundException 해당 partnerId를 지원하는 PG 클라이언트가 없는 경우
+     * @throws InvalidPgCardDataException pgCardData 타입이 partnerId와 맞지 않는 경우
      */
     override fun pay(command: PaymentCommand): Payment {
         // 1. 제휴사 검증
@@ -64,22 +71,25 @@ class PaymentService(
             feePolicyRepository.findEffectivePolicy(partner.id)
                 ?: throw FeePolicyNotFoundException(partner.id)
 
-        // 3. PG 승인
+        // 3. PG 클라이언트 조회
         val pgClient =
             pgClients.firstOrNull { it.supports(partner.id) }
                 ?: throw PgClientNotFoundException(partner.id)
+
+        // 4. pgCardData 타입 검증
+        validatePgCardData(partner.id, command)
+
+        // 5. PG 승인
         val approve =
             pgClient.approve(
                 PgApproveRequest(
                     partnerId = partner.id,
                     amount = command.amount,
-                    cardBin = command.cardBin,
-                    cardLast4 = command.cardLast4,
-                    productName = command.productName,
+                    pgCardData = command.pgCardData,
                 ),
             )
 
-        // 4. 수수료 계산 (정책 기반)
+        // 6. 수수료 계산 (정책 기반)
         val (fee, net) =
             FeeCalculator.calculateFee(
                 command.amount,
@@ -87,7 +97,7 @@ class PaymentService(
                 policy.fixedFee,
             )
 
-        // 5. 결제 저장
+        // 7. 결제 저장 (cardBin/cardLast4는 PG 응답에서 가져옴)
         val payment =
             Payment(
                 partnerId = partner.id,
@@ -95,13 +105,40 @@ class PaymentService(
                 appliedFeeRate = policy.percentage,
                 feeAmount = fee,
                 netAmount = net,
-                cardBin = command.cardBin,
-                cardLast4 = command.cardLast4,
+                cardBin = approve.cardBin,
+                cardLast4 = approve.cardLast4,
                 approvalCode = approve.approvalCode,
                 approvedAt = approve.approvedAt,
                 status = PaymentStatus.APPROVED,
             )
 
         return paymentRepository.save(payment)
+    }
+
+    /**
+     * PG별 pgCardData 타입을 검증합니다.
+     *
+     * @param partnerId 제휴사 ID
+     * @param command 결제 명령
+     * @throws InvalidPgCardDataException pgCardData 타입이 partnerId와 맞지 않는 경우
+     *
+     * 알 수 없는 partnerId는 [PgClientNotFoundException] 단계에서 처리되므로 여기서는 검증하지 않습니다.
+     */
+    private fun validatePgCardData(partnerId: Long, command: PaymentCommand) {
+        val (expectedType, isValid) =
+            when (partnerId) {
+                1L -> "MockPgCardData" to (command.pgCardData is MockPgCardDataDto)
+                2L -> "TestPgCardData" to (command.pgCardData is TestPgCardDataDto)
+                3L -> "NewPgCardData" to (command.pgCardData is NewPgCardDataDto)
+                else -> return // 알 수 없는 partnerId는 PgClientNotFoundException에서 처리
+            }
+
+        if (!isValid) {
+            throw InvalidPgCardDataException(
+                partnerId = partnerId,
+                expectedType = expectedType,
+                actualType = command.pgCardData::class.simpleName ?: "Unknown"
+            )
+        }
     }
 }
