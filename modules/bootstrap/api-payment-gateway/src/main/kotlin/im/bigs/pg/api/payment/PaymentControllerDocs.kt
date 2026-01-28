@@ -7,7 +7,9 @@ import im.bigs.pg.api.payment.dto.QueryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -33,7 +35,17 @@ interface PaymentControllerDocs {
      */
     @Operation(
         summary = "결제 생성",
-        description = "제휴사 ID와 결제 금액을 받아 PG 승인 후 결제를 생성합니다. 수수료 정책이 자동으로 적용됩니다."
+        description =
+        """
+결제를 생성합니다.
+
+## pgCardData 조건
+| partnerId | PG | type | 필드 |
+|-----------|-----|------|------|
+| 1 | MockPG | MOCK | cardBin, cardLast4, productName |
+| 2 | TestPG | TEST_PG | cardNumber, birthDate, expiry, cardPassword |
+| 3 | NewPG | NEW_PG | encryptedCardToken, merchantId, orderId |
+"""
     )
     @ApiResponses(
         value =
@@ -114,6 +126,66 @@ interface PaymentControllerDocs {
                     )
                 ]
             ),
+        ]
+    )
+    @RequestBody(
+        required = true,
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = CreatePaymentRequest::class),
+                examples = [
+                    ExampleObject(
+                        name = "MOCK",
+                        summary = "MockPG (partnerId=1)",
+                        value = """
+                    {
+                      "partnerId": 1,
+                      "amount": 1000,
+                      "pgCardData": {
+                        "type": "MOCK",
+                        "cardBin": "123456",
+                        "cardLast4": "4242",
+                        "productName": "테스트 상품"
+                      }
+                    }
+                    """
+                    ),
+                    ExampleObject(
+                        name = "TEST_PG",
+                        summary = "TestPG (partnerId=2)",
+                        value = """
+                    {
+                      "partnerId": 2,
+                      "amount": 1000,
+                      "pgCardData": {
+                        "type": "TEST_PG",
+                        "cardNumber": "1111-1111-1111-1111",
+                        "birthDate": "19900101",
+                        "expiry": "1227",
+                        "cardPassword": "12"
+                      }
+                    }
+                    """
+                    ),
+                    ExampleObject(
+                        name = "NEW_PG",
+                        summary = "NewPG (partnerId=3)",
+                        value = """
+                    {
+                      "partnerId": 3,
+                      "amount": 1000,
+                      "pgCardData": {
+                        "type": "NEW_PG",
+                        "encryptedCardToken": "enc_token_xxx",
+                        "merchantId": "M001",
+                        "orderId": "ORD-001"
+                      }
+                    }
+                    """
+                    )
+                ]
+            )
         ]
     )
     fun create(req: CreatePaymentRequest): ResponseEntity<PaymentResponse>
