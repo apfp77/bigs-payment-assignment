@@ -38,3 +38,10 @@ class PgClientNotFoundException(partnerId: Long) :
         errorCode = "PG_CLIENT_NOT_FOUND",
         message = "No PG client for partner: $partnerId"
     )
+
+/** PG 카드 데이터 타입 불일치. */
+class InvalidPgCardDataException(partnerId: Long, expectedType: String, actualType: String) :
+    PaymentException(
+        errorCode = "INVALID_PG_CARD_DATA",
+        message = "partnerId=$partnerId requires $expectedType, but received $actualType"
+    )
