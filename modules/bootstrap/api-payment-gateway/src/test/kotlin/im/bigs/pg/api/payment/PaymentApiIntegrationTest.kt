@@ -1,6 +1,7 @@
 package im.bigs.pg.api.payment
 
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
+import im.bigs.pg.api.payment.dto.MockPgCardData
 import im.bigs.pg.api.payment.dto.PaymentResponse
 import im.bigs.pg.api.payment.dto.QueryResponse
 import im.bigs.pg.infra.persistence.partner.entity.FeePolicyEntity
@@ -31,7 +32,7 @@ import kotlin.test.assertTrue
  * 결제 API 통합 테스트.
  * - @SpringBootTest로 전체 컨텍스트 로드
  * - H2 인메모리 DB 사용
- * - MockPgClient 활용 (홀수 partnerId)
+ * - MockPgClient 활용 (partnerId=1)
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -46,15 +47,15 @@ class PaymentApiIntegrationTest {
 
     @Autowired lateinit var feePolicyRepository: FeePolicyJpaRepository
 
-    private var testPartnerId: Long = 0L
+    private var testPartnerId: Long = 1L
 
     @BeforeEach
     fun setup() {
-        // 기존 결제 데이터만 삭제 (제휴사/정책은 유지)
+        // 기존 결제 데이터만 삭제
         paymentRepository.deleteAll()
 
-        // 테스트용 제휴사 설정 (홀수 ID로 MockPgClient 사용)
-        if (partnerRepository.count() == 0L) {
+        // 테스트용 제휴사 설정 (partnerId=1 for MockPgClient)
+        if (partnerRepository.findById(1L).isEmpty) {
             val partner =
                 partnerRepository.save(
                     PartnerEntity(code = "TEST1", name = "Test Partner 1", active = true)
@@ -69,26 +70,12 @@ class PaymentApiIntegrationTest {
             )
             testPartnerId = partner.id!!
         } else {
-            testPartnerId = partnerRepository.findAll().first().id!!
-        }
-
-        // 홀수 ID 보장 (MockPgClient 사용을 위해)
-        if (testPartnerId % 2 == 0L) {
-            val partner =
-                partnerRepository.save(
-                    PartnerEntity(code = "TEST_ODD", name = "Test Partner Odd", active = true)
-                )
-            feePolicyRepository.save(
-                FeePolicyEntity(
-                    partnerId = partner.id!!,
-                    effectiveFrom = Instant.parse("2020-01-01T00:00:00Z"),
-                    percentage = BigDecimal("0.0235"),
-                    fixedFee = BigDecimal.ZERO,
-                )
-            )
-            testPartnerId = partner.id!!
+            testPartnerId = 1L
         }
     }
+
+    private val mockCardData =
+        MockPgCardData(cardBin = "123456", cardLast4 = "4242", productName = "테스트 상품")
 
     // ==================== 결제 생성 테스트 ====================
 
@@ -96,19 +83,19 @@ class PaymentApiIntegrationTest {
     @Order(1)
     @DisplayName("결제 생성이 성공해야 한다")
     fun `결제 생성이 성공해야 한다`() {
-        val request = CreatePaymentRequest(
-            partnerId = testPartnerId,
-            amount = BigDecimal("10000"),
-            cardBin = "123456",
-            cardLast4 = "4242",
-            productName = "테스트 상품",
-        )
+        val request =
+            CreatePaymentRequest(
+                partnerId = testPartnerId,
+                amount = BigDecimal("10000"),
+                pgCardData = mockCardData,
+            )
 
-        val response = restTemplate.postForEntity(
-            "/api/v1/payments",
-            request,
-            PaymentResponse::class.java,
-        )
+        val response =
+            restTemplate.postForEntity(
+                "/api/v1/payments",
+                request,
+                PaymentResponse::class.java,
+            )
 
         assertEquals(HttpStatus.OK, response.statusCode)
         assertNotNull(response.body)
@@ -129,7 +116,7 @@ class PaymentApiIntegrationTest {
             CreatePaymentRequest(
                 partnerId = testPartnerId,
                 amount = BigDecimal("10000"),
-                cardLast4 = "1111",
+                pgCardData = MockPgCardData(cardBin = "123456", cardLast4 = "1111"),
             )
 
         val response =
@@ -147,7 +134,11 @@ class PaymentApiIntegrationTest {
                 0,
                 "appliedFeeRate expected 0.0235 but was ${it.appliedFeeRate}"
             )
-            assertEquals(BigDecimal("235").compareTo(it.feeAmount), 0, "feeAmount expected 235 but was ${it.feeAmount}")
+            assertEquals(
+                BigDecimal("235").compareTo(it.feeAmount),
+                0,
+                "feeAmount expected 235 but was ${it.feeAmount}"
+            )
             assertEquals(
                 BigDecimal("9765").compareTo(it.netAmount),
                 0,
@@ -164,7 +155,7 @@ class PaymentApiIntegrationTest {
             CreatePaymentRequest(
                 partnerId = testPartnerId,
                 amount = BigDecimal("5000"),
-                cardLast4 = "9999",
+                pgCardData = MockPgCardData(cardBin = "123456", cardLast4 = "9999"),
             )
 
         val response =
@@ -316,7 +307,7 @@ class PaymentApiIntegrationTest {
             CreatePaymentRequest(
                 partnerId = testPartnerId,
                 amount = BigDecimal("7777"),
-                cardLast4 = "5555",
+                pgCardData = MockPgCardData(cardBin = "123456", cardLast4 = "5555"),
             )
         val createResponse =
             restTemplate.postForEntity(
@@ -345,7 +336,7 @@ class PaymentApiIntegrationTest {
             CreatePaymentRequest(
                 partnerId = testPartnerId,
                 amount = amount,
-                cardLast4 = "0000",
+                pgCardData = MockPgCardData(cardBin = "123456", cardLast4 = "0000"),
             )
         return restTemplate.postForEntity(
             "/api/v1/payments",

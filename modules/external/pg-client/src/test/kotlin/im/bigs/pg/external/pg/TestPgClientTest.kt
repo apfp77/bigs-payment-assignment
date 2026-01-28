@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
+import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.external.pg.config.TestPgProperties
 import im.bigs.pg.external.pg.exception.PgAuthenticationException
@@ -32,6 +33,7 @@ class TestPgClientTest {
 
     private val testApiKey = "11111111-1111-4111-8111-111111111111"
     private val testIv = "AAAAAAAAAAAAAAAA"
+    private val testCardData = TestPgCardDataDto("1111-1111-1111-1111", "19900101", "1227", "12")
 
     @BeforeEach
     fun setup() {
@@ -53,12 +55,12 @@ class TestPgClientTest {
     }
 
     @Test
-    @DisplayName("짝수 partnerId만 지원해야 한다")
-    fun `짝수 partnerId만 지원해야 한다`() {
+    @DisplayName("partnerId=2만 지원해야 한다")
+    fun `partnerId=2만 지원해야 한다`() {
         assertEquals(false, client.supports(1L))
         assertEquals(true, client.supports(2L))
         assertEquals(false, client.supports(3L))
-        assertEquals(true, client.supports(100L))
+        assertEquals(false, client.supports(100L))
     }
 
     @Test
@@ -89,9 +91,7 @@ class TestPgClientTest {
             PgApproveRequest(
                 partnerId = 2L,
                 amount = BigDecimal("10000"),
-                cardBin = "111111",
-                cardLast4 = "1111",
-                productName = "테스트",
+                pgCardData = testCardData,
             )
 
         val result = client.approve(request)
@@ -127,9 +127,7 @@ class TestPgClientTest {
             PgApproveRequest(
                 partnerId = 2L,
                 amount = BigDecimal("10000"),
-                cardBin = "222222",
-                cardLast4 = "2222",
-                productName = null,
+                pgCardData = testCardData,
             )
 
         val exception = assertThrows<PgRejectedException> { client.approve(request) }
@@ -150,9 +148,7 @@ class TestPgClientTest {
             PgApproveRequest(
                 partnerId = 2L,
                 amount = BigDecimal("10000"),
-                cardBin = null,
-                cardLast4 = null,
-                productName = null,
+                pgCardData = testCardData,
             )
 
         assertThrows<PgAuthenticationException> { client.approve(request) }
@@ -169,9 +165,7 @@ class TestPgClientTest {
             PgApproveRequest(
                 partnerId = 2L,
                 amount = BigDecimal("10000"),
-                cardBin = null,
-                cardLast4 = null,
-                productName = null,
+                pgCardData = testCardData,
             )
 
         assertThrows<PgServerException> { client.approve(request) }
@@ -205,9 +199,7 @@ class TestPgClientTest {
             PgApproveRequest(
                 partnerId = 2L,
                 amount = BigDecimal("5000"),
-                cardBin = null,
-                cardLast4 = null,
-                productName = null,
+                pgCardData = testCardData,
             )
 
         val result = client.approve(request)

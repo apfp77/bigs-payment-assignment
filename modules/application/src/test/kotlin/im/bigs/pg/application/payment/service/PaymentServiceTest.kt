@@ -4,6 +4,7 @@ import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.application.partner.port.out.PartnerOutPort
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
+import im.bigs.pg.application.pg.port.out.MockPgCardDataDto
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
@@ -36,13 +37,17 @@ class PaymentServiceTest {
             override fun supports(partnerId: Long) = true
             override fun approve(request: PgApproveRequest) =
                 PgApproveResult(
-                    "APPROVAL-123",
-                    LocalDateTime.of(2024, 1, 1, 0, 0),
-                    PaymentStatus.APPROVED
+                    approvalCode = "APPROVAL-123",
+                    approvedAt = LocalDateTime.of(2024, 1, 1, 0, 0),
+                    status = PaymentStatus.APPROVED,
+                    cardBin = "123456",
+                    cardLast4 = "4242",
                 )
         }
 
     private val service = PaymentService(partnerRepo, feeRepo, paymentRepo, listOf(pgClient))
+
+    private val mockCardData = MockPgCardDataDto("123456", "4242", "테스트 상품")
 
     // ==================== 예외 테스트 ====================
 
@@ -53,7 +58,13 @@ class PaymentServiceTest {
 
         val exception =
             assertThrows<PartnerNotFoundException> {
-                service.pay(PaymentCommand(partnerId = 999L, amount = BigDecimal("10000")))
+                service.pay(
+                    PaymentCommand(
+                        partnerId = 999L,
+                        amount = BigDecimal("10000"),
+                        pgCardData = mockCardData
+                    )
+                )
             }
         assertEquals("PARTNER_NOT_FOUND", exception.errorCode)
     }
@@ -65,7 +76,13 @@ class PaymentServiceTest {
 
         val exception =
             assertThrows<PartnerInactiveException> {
-                service.pay(PaymentCommand(partnerId = 1L, amount = BigDecimal("10000")))
+                service.pay(
+                    PaymentCommand(
+                        partnerId = 1L,
+                        amount = BigDecimal("10000"),
+                        pgCardData = mockCardData
+                    )
+                )
             }
         assertEquals("PARTNER_INACTIVE", exception.errorCode)
     }
@@ -78,7 +95,13 @@ class PaymentServiceTest {
 
         val exception =
             assertThrows<FeePolicyNotFoundException> {
-                service.pay(PaymentCommand(partnerId = 1L, amount = BigDecimal("10000")))
+                service.pay(
+                    PaymentCommand(
+                        partnerId = 1L,
+                        amount = BigDecimal("10000"),
+                        pgCardData = mockCardData
+                    )
+                )
             }
         assertEquals("FEE_POLICY_NOT_FOUND", exception.errorCode)
     }
@@ -100,7 +123,12 @@ class PaymentServiceTest {
         val savedSlot = slot<Payment>()
         every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 99L) }
 
-        val cmd = PaymentCommand(partnerId = 1L, amount = BigDecimal("10000"))
+        val cmd =
+            PaymentCommand(
+                partnerId = 1L,
+                amount = BigDecimal("10000"),
+                pgCardData = mockCardData
+            )
         val res = service.pay(cmd)
 
         // 10000 * 0.0235 = 235 (HALF_UP)
@@ -128,7 +156,12 @@ class PaymentServiceTest {
         val savedSlot = slot<Payment>()
         every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 99L) }
 
-        val cmd = PaymentCommand(partnerId = 1L, amount = BigDecimal("10000"), cardLast4 = "4242")
+        val cmd =
+            PaymentCommand(
+                partnerId = 1L,
+                amount = BigDecimal("10000"),
+                pgCardData = mockCardData
+            )
         val res = service.pay(cmd)
 
         // 10000 * 0.03 = 300 + 100 = 400
@@ -157,7 +190,12 @@ class PaymentServiceTest {
                 savedSlot.captured.copy(id = 100L)
             }
 
-        val cmd = PaymentCommand(partnerId = 1L, amount = BigDecimal("5000"))
+        val cmd =
+            PaymentCommand(
+                partnerId = 1L,
+                amount = BigDecimal("5000"),
+                pgCardData = mockCardData
+            )
         val res = service.pay(cmd)
 
         // appliedFeeRate가 정책의 percentage와 일치해야 함
