@@ -44,19 +44,60 @@
 
 **검증 항목**:
 
-- HTTP 상태: `500 BAD_REQUEST`
+- HTTP 상태: `400 BAD_REQUEST`
 - code: "PG_CLIENT_NOT_FOUND"
+
+---
+
+### 5. InvalidPgCardDataException은 400 BAD_REQUEST를 반환해야 한다
+
+**검증 항목**:
+
+- HTTP 상태: `400 BAD_REQUEST`
+- code: "INVALID_PG_CARD_DATA"
+
+---
+
+### 6. PgRejectedException은 422 UNPROCESSABLE_ENTITY를 반환해야 한다
+
+**검증 항목**:
+
+- HTTP 상태: `422 UNPROCESSABLE_ENTITY`
+- code: 에러코드 (예: "INSUFFICIENT_LIMIT")
+- message: referenceId 포함
+
+---
+
+### 7. PgAuthenticationException은 500 INTERNAL_SERVER_ERROR를 반환해야 한다
+
+**검증 항목**:
+
+- HTTP 상태: `500 INTERNAL_SERVER_ERROR`
+- code: "PG_AUTH_FAILED"
+
+---
+
+### 8. PgServerException은 502 BAD_GATEWAY를 반환해야 한다
+
+**검증 항목**:
+
+- HTTP 상태: `502 BAD_GATEWAY`
+- code: "PG_SERVER_ERROR"
 
 ---
 
 ## HTTP 상태 코드 매핑 요약
 
 | 예외                         | HTTP 상태 | 사유            |
-| ---------------------------- |---------| --------------- |
-| `PartnerNotFoundException`   | 404     | 리소스 없음     |
-| `PartnerInactiveException`   | 400     | 클라이언트 오류 |
-| `FeePolicyNotFoundException` | 500     | 서버 설정 오류  |
-| `PgClientNotFoundException`  | 400     | 서버 설정 오류  |
+| ---------------------------- | --------- | --------------- |
+| `PartnerNotFoundException`   | 404       | 리소스 없음     |
+| `PartnerInactiveException`   | 400       | 클라이언트 오류 |
+| `InvalidPgCardDataException` | 400       | 클라이언트 오류 |
+| `PgClientNotFoundException`  | 400       | 서버 설정 오류  |
+| `FeePolicyNotFoundException` | 500       | 서버 설정 오류  |
+| `PgRejectedException`        | 422       | PG 결제 거절    |
+| `PgAuthenticationException`  | 500       | PG 인증 실패    |
+| `PgServerException`          | 502       | PG 서버 장애    |
 
 ## 테스트 실행
 
