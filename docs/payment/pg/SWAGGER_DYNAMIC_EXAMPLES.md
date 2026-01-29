@@ -126,8 +126,8 @@ private fun buildPaymentExamples() = listOf(
 
 ## 관련 파일
 
-| 파일                                                                                                                                                                 | 설명                 |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| [SwaggerConfig.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/config/SwaggerConfig.kt)                    | 동적 예제 생성 로직  |
-| [PgCardData.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/payment/dto/PgCardData.kt)                     | PG별 카드 데이터 DTO |
-| [CreatePaymentRequest.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/payment/dto/CreatePaymentRequest.kt) | 결제 생성 요청 DTO   |
+| 파일                      | 설명                 |
+| ------------------------- | -------------------- |
+| `SwaggerConfig.kt`        | 동적 예제 생성 로직  |
+| `PgCardData.kt`           | PG별 카드 데이터 DTO |
+| `CreatePaymentRequest.kt` | 결제 생성 요청 DTO   |

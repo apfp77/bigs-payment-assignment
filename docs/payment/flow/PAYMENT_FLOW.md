@@ -319,13 +319,13 @@ flowchart TD
 
 ## 관련 파일
 
-| 레이어      | 파일                                                                                                                                                                 | 역할             |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| API         | [PaymentController.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/payment/PaymentController.kt)           | HTTP 요청 처리   |
-| API         | [CreatePaymentRequest.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/payment/dto/CreatePaymentRequest.kt) | 요청 DTO         |
-| API         | [PaymentResponse.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/payment/dto/PaymentResponse.kt)           | 응답 DTO         |
-| Application | [PaymentService.kt](file:///Users/yk/backend-test-v2/modules/application/src/main/kotlin/im/bigs/pg/application/payment/service/PaymentService.kt)                   | 비즈니스 로직    |
-| Application | [PaymentCommand.kt](file:///Users/yk/backend-test-v2/modules/application/src/main/kotlin/im/bigs/pg/application/payment/port/in/PaymentCommand.kt)                   | 입력 포트        |
-| External    | [TestPgClient.kt](file:///Users/yk/backend-test-v2/modules/external/pg-client/src/main/kotlin/im/bigs/pg/external/pg/TestPgClient.kt)                                | TestPG 연동      |
-| Domain      | [FeeCalculator.kt](file:///Users/yk/backend-test-v2/modules/domain/src/main/kotlin/im/bigs/pg/domain/calculation/FeeCalculator.kt)                                   | 수수료 계산      |
-| Exception   | [GlobalExceptionHandler.kt](file:///Users/yk/backend-test-v2/modules/bootstrap/api-payment-gateway/src/main/kotlin/im/bigs/pg/api/config/GlobalExceptionHandler.kt)  | 예외 → HTTP 응답 |
+| 레이어      | 파일                        | 역할             |
+| ----------- | --------------------------- | ---------------- |
+| API         | `PaymentController.kt`      | HTTP 요청 처리   |
+| API         | `CreatePaymentRequest.kt`   | 요청 DTO         |
+| API         | `PaymentResponse.kt`        | 응답 DTO         |
+| Application | `PaymentService.kt`         | 비즈니스 로직    |
+| Application | `PaymentCommand.kt`         | 입력 포트        |
+| External    | `TestPgClient.kt`           | TestPG 연동      |
+| Domain      | `FeeCalculator.kt`          | 수수료 계산      |
+| Exception   | `GlobalExceptionHandler.kt` | 예외 → HTTP 응답 |
