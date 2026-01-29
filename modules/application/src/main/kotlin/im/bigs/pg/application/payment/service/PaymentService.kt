@@ -8,7 +8,10 @@ import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.pg.port.out.MockPgCardDataDto
 import im.bigs.pg.application.pg.port.out.NewPgCardDataDto
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
+import im.bigs.pg.application.pg.port.out.PgAuthenticationException
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.application.pg.port.out.PgRejectedException
+import im.bigs.pg.application.pg.port.out.PgServerException
 import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.calculation.FeeCalculator
 import im.bigs.pg.domain.exception.FeePolicyNotFoundException
@@ -19,6 +22,8 @@ import im.bigs.pg.domain.exception.PgClientNotFoundException
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
+import java.time.LocalDateTime
 
 /**
  * 결제 생성 유스케이스 구현체.
@@ -79,15 +84,39 @@ class PaymentService(
         // 4. pgCardData 타입 검증
         validatePgCardData(partner.id, command)
 
-        // 5. PG 승인
+        // 5. PG 승인 (실패 시 저장 후 재전파)
         val approve =
-            pgClient.approve(
-                PgApproveRequest(
-                    partnerId = partner.id,
-                    amount = command.amount,
-                    pgCardData = command.pgCardData,
-                ),
-            )
+            try {
+                pgClient.approve(
+                    PgApproveRequest(
+                        partnerId = partner.id,
+                        amount = command.amount,
+                        pgCardData = command.pgCardData,
+                    ),
+                )
+            } catch (e: PgRejectedException) {
+                // 실패 결제 저장
+                val failedPayment =
+                    Payment(
+                        partnerId = partner.id,
+                        amount = command.amount,
+                        appliedFeeRate = policy.percentage,
+                        feeAmount = BigDecimal.ZERO,
+                        netAmount = BigDecimal.ZERO,
+                        status = PaymentStatus.REJECTED,
+                        failureCode = e.errorCode,
+                        failureMessage = e.message,
+                        failedAt = LocalDateTime.now(),
+                    )
+                paymentRepository.save(failedPayment)
+                throw e // 422 응답 유지
+            } catch (e: PgAuthenticationException) {
+                // TODO: 알림 시스템 연동 - API-KEY 설정 오류 등 모니터링 필요
+                throw e
+            } catch (e: PgServerException) {
+                // TODO: 알림 시스템 연동 - PG 서버 장애 모니터링 필요
+                throw e
+            }
 
         // 6. 수수료 계산 (정책 기반)
         val (fee, net) =

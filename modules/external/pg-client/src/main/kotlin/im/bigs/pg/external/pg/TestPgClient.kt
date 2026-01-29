@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
+import im.bigs.pg.application.pg.port.out.PgAuthenticationException
 import im.bigs.pg.application.pg.port.out.PgClientOutPort
+import im.bigs.pg.application.pg.port.out.PgRejectedException
+import im.bigs.pg.application.pg.port.out.PgServerException
 import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.external.pg.config.TestPgProperties
@@ -12,9 +15,6 @@ import im.bigs.pg.external.pg.crypto.AesGcmCrypto
 import im.bigs.pg.external.pg.dto.TestPgErrorResponse
 import im.bigs.pg.external.pg.dto.TestPgPayload
 import im.bigs.pg.external.pg.dto.TestPgSuccessResponse
-import im.bigs.pg.external.pg.exception.PgAuthenticationException
-import im.bigs.pg.external.pg.exception.PgRejectedException
-import im.bigs.pg.external.pg.exception.PgServerException
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.context.properties.EnableConfigurationProperties

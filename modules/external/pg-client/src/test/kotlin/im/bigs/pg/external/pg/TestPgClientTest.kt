@@ -10,12 +10,12 @@ import com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
+import im.bigs.pg.application.pg.port.out.PgAuthenticationException
+import im.bigs.pg.application.pg.port.out.PgRejectedException
+import im.bigs.pg.application.pg.port.out.PgServerException
 import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.external.pg.config.TestPgProperties
-import im.bigs.pg.external.pg.exception.PgAuthenticationException
-import im.bigs.pg.external.pg.exception.PgRejectedException
-import im.bigs.pg.external.pg.exception.PgServerException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName

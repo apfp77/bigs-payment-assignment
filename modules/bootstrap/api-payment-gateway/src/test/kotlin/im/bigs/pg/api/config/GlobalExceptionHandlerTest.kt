@@ -45,12 +45,12 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("PgClientNotFoundException은 500 INTERNAL_SERVER_ERROR를 반환해야 한다")
-    fun `PgClientNotFoundException은 500 INTERNAL_SERVER_ERROR를 반환해야 한다`() {
+    @DisplayName("PgClientNotFoundException은 400 BAD_REQUEST를 반환해야 한다")
+    fun `PgClientNotFoundException은 400 BAD_REQUEST를 반환해야 한다`() {
         val exception = PgClientNotFoundException(1L)
         val response = handler.handle(exception)
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.statusCode)
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
         assertEquals("PG_CLIENT_NOT_FOUND", response.body?.code)
     }
 }
