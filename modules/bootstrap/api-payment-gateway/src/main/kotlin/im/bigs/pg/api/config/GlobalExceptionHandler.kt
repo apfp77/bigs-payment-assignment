@@ -37,7 +37,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(PgClientNotFoundException::class)
     fun handle(e: PgClientNotFoundException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        ResponseEntity.status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse(e.errorCode, e.message))
 
     /** 기타 PaymentException 처리 (fallback) */
