@@ -161,8 +161,8 @@ feeRepo.save(
 
 ### 9. 문서 업데이트
 
-- [ ] `docs/ARCHITECTURE.md` - PG 클라이언트 전략 표, 시드 데이터 표
-- [ ] `docs/payment/PG_CARD_DATA_POLYMORPHISM.md` - 새 PG 구현체 설명
+- [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) - PG 클라이언트 전략 표, 시드 데이터 표
+- [PG_CARD_DATA_POLYMORPHISM.md](./PG_CARD_DATA_POLYMORPHISM.md) - 새 PG 구현체 설명
 
 ---
 
