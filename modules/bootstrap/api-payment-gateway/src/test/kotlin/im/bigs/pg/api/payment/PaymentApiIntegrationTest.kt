@@ -110,6 +110,29 @@ class PaymentApiIntegrationTest {
 
     @Test
     @Order(2)
+    @DisplayName("잘못된 cardBin 형식은 400 에러를 반환해야 한다")
+    fun `잘못된 cardBin 형식은 400 에러를 반환해야 한다`() {
+        val request =
+            CreatePaymentRequest(
+                partnerId = testPartnerId,
+                amount = BigDecimal("10000"),
+                pgCardData =
+                MockPgCardData(cardBin = "12345", cardLast4 = "4242"), // 5자리 - 잘못됨
+            )
+
+        val response =
+            restTemplate.postForEntity(
+                "/api/v1/payments",
+                request,
+                Map::class.java,
+            )
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertEquals("VALIDATION_FAILED", (response.body as Map<*, *>)["code"])
+    }
+
+    @Test
+    @Order(2)
     @DisplayName("결제 생성 시 수수료 정책이 올바르게 적용되어야 한다")
     fun `결제 생성 시 수수료 정책이 올바르게 적용되어야 한다`() {
         val request =
