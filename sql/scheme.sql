@@ -27,12 +27,16 @@ create table if not exists payment (
   net_amount decimal(15,0) not null,
   card_bin varchar(8) null,
   card_last4 varchar(4) null,
-  approval_code varchar(32) not null,
-  approved_at timestamp not null,
+  approval_code varchar(32) null,
+  approved_at timestamp null,
   status varchar(20) not null,
+  failure_code varchar(64) null,
+  failure_message varchar(128) null,
+  failed_at timestamp null,
   created_at timestamp not null,
   updated_at timestamp not null,
   index idx_payment_created (created_at desc, id desc),
-  index idx_payment_partner_created (partner_id, created_at desc)
+  index idx_payment_partner_created (partner_id, created_at desc),
+  index idx_payment_status (status)
 );
 

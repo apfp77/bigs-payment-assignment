@@ -16,9 +16,12 @@ import java.time.LocalDateTime
  * @property netAmount 공제 후 금액(정산금)
  * @property cardBin 선택 저장되는 카드 BIN(없을 수 있음)
  * @property cardLast4 마스킹용 마지막 4자리(없을 수 있음)
- * @property approvalCode 승인 식별 코드
- * @property approvedAt 승인 시각(UTC)
- * @property status 상태(승인/취소 등)
+ * @property approvalCode 승인 식별 코드 (실패 시 null)
+ * @property approvedAt 승인 시각 (실패 시 null)
+ * @property status 상태(승인/거절/취소 등)
+ * @property failureCode PG 에러 코드 (실패 시에만)
+ * @property failureMessage 실패 상세 메시지 (실패 시에만)
+ * @property failedAt 실패 시각 (실패 시에만)
  * @property createdAt 생성 시각(정렬/커서 키)
  * @property updatedAt 갱신 시각
  */
@@ -31,21 +34,27 @@ data class Payment(
     val netAmount: BigDecimal,
     val cardBin: String? = null,
     val cardLast4: String? = null,
-    val approvalCode: String,
-    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val approvedAt: LocalDateTime,
+    val approvalCode: String? = null,
+    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") val approvedAt: LocalDateTime? = null,
     val status: PaymentStatus,
+    val failureCode: String? = null,
+    val failureMessage: String? = null,
+    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") val failedAt: LocalDateTime? = null,
     @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val createdAt: LocalDateTime = LocalDateTime.now(),
     @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     val updatedAt: LocalDateTime = LocalDateTime.now(),
 )
 
-/** 결제 상태. 취소 시에도 원본 행을 유지하고 상태만 변경하는 방식 등을 고려합니다. */
-/** 결제 상태.
- * - 승인(Approved), 취소(Canceled) 등 단순 상태를 표현합니다.
+/**
+ * 결제 상태.
+ * - 승인(Approved), 거절(Rejected), 취소(Canceled) 등 상태를 표현합니다.
  */
-enum class PaymentStatus { APPROVED, CANCELED }
+enum class PaymentStatus {
+    APPROVED,
+    REJECTED,
+    CANCELED
+}
 
 /** 조회 API의 통계 응답에 사용되는 값 모음. */
 /** 조회 API의 통계 응답에 사용되는 값 모음. */

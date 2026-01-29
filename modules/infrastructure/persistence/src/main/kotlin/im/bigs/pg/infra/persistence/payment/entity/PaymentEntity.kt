@@ -16,30 +16,20 @@ import java.time.Instant
 @Entity
 @Table(name = "payment")
 class PaymentEntity(
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    var id: Long? = null,
-    @Column(nullable = false)
-    var partnerId: Long,
-    @Column(nullable = false, precision = 15, scale = 0)
-    var amount: BigDecimal,
-    @Column(nullable = false, precision = 10, scale = 6)
-    var appliedFeeRate: BigDecimal,
-    @Column(nullable = false, precision = 15, scale = 0)
-    var feeAmount: BigDecimal,
-    @Column(nullable = false, precision = 15, scale = 0)
-    var netAmount: BigDecimal,
-    @Column(length = 8)
-    var cardBin: String? = null,
-    @Column(length = 4)
-    var cardLast4: String? = null,
-    @Column(nullable = false, length = 32)
-    var approvalCode: String,
-    @Column(nullable = false)
-    var approvedAt: Instant,
-    @Column(nullable = false, length = 20)
-    var status: String,
-    @Column(nullable = false)
-    var createdAt: Instant,
-    @Column(nullable = false)
-    var updatedAt: Instant,
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+    @Column(nullable = false) var partnerId: Long,
+    @Column(nullable = false, precision = 15, scale = 0) var amount: BigDecimal,
+    @Column(nullable = false, precision = 10, scale = 6) var appliedFeeRate: BigDecimal,
+    @Column(nullable = false, precision = 15, scale = 0) var feeAmount: BigDecimal,
+    @Column(nullable = false, precision = 15, scale = 0) var netAmount: BigDecimal,
+    @Column(length = 8) var cardBin: String? = null,
+    @Column(length = 4) var cardLast4: String? = null,
+    @Column(length = 32) var approvalCode: String? = null,
+    var approvedAt: Instant? = null,
+    @Column(nullable = false, length = 20) var status: String,
+    @Column(length = 64) var failureCode: String? = null,
+    @Column(length = 128) var failureMessage: String? = null,
+    var failedAt: Instant? = null,
+    @Column(nullable = false) var createdAt: Instant,
+    @Column(nullable = false) var updatedAt: Instant,
 )
