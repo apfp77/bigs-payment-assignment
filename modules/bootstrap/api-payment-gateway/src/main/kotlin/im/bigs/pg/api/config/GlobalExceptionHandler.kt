@@ -11,6 +11,7 @@ import im.bigs.pg.domain.exception.PaymentException
 import im.bigs.pg.domain.exception.PgClientNotFoundException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.time.Instant
@@ -64,6 +65,19 @@ class GlobalExceptionHandler {
     fun handle(e: PgServerException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_GATEWAY)
             .body(ErrorResponse("PG_SERVER_ERROR", e.message))
+
+    // ========== Validation Exceptions ==========
+
+    /** 요청 데이터 검증 실패 (400). 필드 검증 오류 메시지 반환. */
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handle(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
+        val message =
+            e.bindingResult.fieldErrors.joinToString("; ") {
+                "${it.field}: ${it.defaultMessage}"
+            }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse("VALIDATION_FAILED", message))
+    }
 
     // ========== Fallback ==========
 

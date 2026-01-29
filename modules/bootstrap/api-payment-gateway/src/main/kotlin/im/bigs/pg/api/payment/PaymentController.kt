@@ -14,6 +14,7 @@ import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
 import im.bigs.pg.application.pg.port.out.MockPgCardDataDto
 import im.bigs.pg.application.pg.port.out.NewPgCardDataDto
 import im.bigs.pg.application.pg.port.out.TestPgCardDataDto
+import jakarta.validation.Valid
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
@@ -35,7 +36,9 @@ class PaymentController(
 ) : PaymentControllerDocs {
 
     @PostMapping
-    override fun create(@RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
+    override fun create(
+        @Valid @RequestBody req: CreatePaymentRequest
+    ): ResponseEntity<PaymentResponse> {
         val pgCardDataDto =
             when (val data = req.pgCardData) {
                 is MockPgCardData ->
