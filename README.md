@@ -1,143 +1,349 @@
-# 백엔드 사전 과제 – 결제 도메인 서버
+# 결제 도메인 서버
 
-본 과제는 나노바나나 페이먼츠의 “결제 도메인 서버”를 주제로, 백엔드 개발자의 설계·구현·테스트 역량을 평가하기 위한 사전 과제입니다. 제공된 멀티모듈 + 헥사고널 아키텍처 기반 코드를 바탕으로 요구사항을 충족하는 기능을 완성해 주세요.
+나노바나나 페이먼츠의 결제 도메인 서버입니다.
 
-주의: 이 디렉터리(`backend-test-v1`)만 압축/전달됩니다. 외부 경로를 참조하지 않도록 README/코드/스크립트를 유지해 주세요.
+## 프로젝트 개요
 
-## 1. 배경 시나리오
-- 본 서비스는 결제대행사 “나노바나나 페이먼츠”의 결제 도메인 서버입니다.
-- 현재는 제휴사가 없어 “목업 PG”만 연동되어 있으며, 결제는 항상 성공합니다.
-- 정산금 계산식은 임시로 “하드코드(3% + 100원)” 되어 있습니다.
+### 배경
+나노바나나 페이먼츠는 여러 제휴사와 PG(Payment Gateway)를 연동하여 결제 서비스를 제공합니다.  
+본 프로젝트는 **결제 승인**, **결제 내역 조회**, **제휴사별 수수료 정책 관리**를 담당하는 백엔드 서버입니다.
 
-여러 제휴사와 연동을 시작하면서 다음이 필요합니다.
-1) 새로운 결제 제휴사 연동(기본 스켈레톤 제공)
-2) 결제 내역 조회 API 제공(통계 포함, 커서 기반 페이지네이션)
-3) 제휴사별 수수료 정책 적용(하드코드 제거, 정책 테이블 기반)
+### 주요 기능
+- **결제 생성**: 외부 PG 연동을 통한 카드 결제 승인 및 수수료 계산
+- **결제 조회**: 다양한 필터 조건과 커서 기반 페이지네이션을 지원하는 조회 API
+- **통계 집계**: 조회 조건에 맞는 결제 건수, 총 금액, 총 정산금 계산
+- **수수료 정책**: 제휴사별, 시점별 수수료 정책 적용 (effective_from 기준)
+- **다중 PG 지원**: MockPG(테스트용), TestPG(실제 연동) 어댑터 구현
 
-## 2. 과제 목표
-아래 항목을 모두 구현/보강하고, 테스트로 증명해 주세요.
+---
 
-1) 결제 생성
-- 엔드포인트: POST `/api/v1/payments`
-- 내용: 결제 승인(외부 PG 연동) 후, 수수료/정산금 계산 결과를 포함하여 저장
-- 주의: 현재 `PaymentService`는 하드코드된 수수료(3% + 100원)를 사용합니다. 제휴사별 정책(percentage, fixedFee, effective_from)에 따라 계산하도록 리팩터링하세요.  
-  또한 반드시 [11. 참고자료](#11-참고자료) 의 과제 내 연동 대상 API 문서를 참고하여 TestPg 와 Rest API 를 통한 연동을 진행해야 합니다. 
+## 구현 완료 기능
 
-2) 결제 내역 조회 + 통계
-- 엔드포인트: GET `/api/v1/payments`
-- 쿼리: `partnerId`, `status`, `from`, `to`, `cursor`, `limit`
-- 응답: `items[]`, `summary{count,totalAmount,totalNetAmount}`, `nextCursor`, `hasNext`
-- 요구: 통계는 반드시 필터와 동일한 집합을 대상으로 계산되어야 하며, 커서 기반 페이지네이션을 사용해야 합니다.
+### 필수 요구사항
 
-3) 제휴사별 수수료 정책
-- 스키마: `sql/scheme.sql` 의 `partner`, `partner_fee_policy`, `payment` 참조(필요시 보완/수정 가능)
-- 규칙: `effective_from` 기준 가장 최근(<= now) 정책을 적용, 금액은 HALF_UP로 반올림
-- 보안: 카드번호 등 민감정보는 저장/로깅 금지(제공 코드도 마스킹/부분 저장만 수행)
+| 기능 | 설명 |
+|------|------|
+| 결제 생성 API |  `POST /api/v1/payments` - PG 연동 후 수수료/정산금 계산하여 저장 |
+| 결제 조회 API |  `GET /api/v1/payments` - 필터(partnerId, status, from, to) + 커서 페이지네이션 |
+| 통계 집계 |  필터 조건과 동일한 집합에 대해 count, totalAmount, totalNetAmount 계산 |
+| 수수료 정책 적용 |  effective_from 기준 최신 정책 조회, HALF_UP 반올림 |
+| TestPG 연동 |  AES-256-GCM 암호화, REST API 연동 |
+| 민감정보 보호 |  카드번호 마스킹, 부분 저장만 수행 |
 
-## 3. 제공 코드 개요(헥사고널)
-- `modules/domain`: 순수 도메인 모델/유틸(FeePolicy, Payment, FeeCalculator 등)
-- `modules/application`: 유스케이스/포트(PaymentUseCase, QueryPaymentsUseCase, Repository/PgClient 포트, PaymentService 등)
-  - 의도적으로 PaymentService에 “하드코드 수수료 계산”이 남아 있습니다. 이를 정책 기반으로 개선하세요.
-- `modules/infrastructure/persistence`: JPA 엔티티·리포지토리·어댑터(pageBy/summary 제공)
-- `modules/external/pg-client`: PG 연동 어댑터(Mock, TestPay 예시)
-- `modules/bootstrap/api-payment-gateway`: 실행 가능한 Spring Boot API(Controller, 시드 데이터)
+### 선택 요구사항
 
-아키텍처 제약
-- 멀티모듈 경계/의존 역전/포트-어댑터 패턴을 유지할 것
-- `domain`은 프레임워크 의존 금지(순수 Kotlin)
+| 기능 | 설명 |
+|------|------|
+| 추가 PG 연동 |  MockPG, TestPG 어댑터 구현 |
+| OpenAPI 문서화 |  Swagger UI (springdoc-openapi) |
+| 외부 DB 전환 |  MariaDB + docker-compose + Flyway 마이그레이션 |
 
-## 4. 필수 요구 사항
-- 결제 생성 시 저장 레코드에 다음 필드가 정확히 기록됨: 금액, 적용 수수료율, 수수료, 정산금, 카드 식별(마스킹), 승인번호, 승인시각, 상태
-- 조회 API에서 필터 조합별 `summary`가 `items`와 동일 집합을 정확히 집계
-- 커서 페이지네이션이 정렬 키(`createdAt desc, id desc`) 기반으로 올바르게 동작(다음 페이지 유무/커서 일관성)
-- 제휴사별 수수료 정책(비율/고정/시점)이 적용되어 계산 결과가 맞음
-- 모든 신규/수정 로직에 대해 의미 있는 단위/통합 테스트 존재, 빠르고 결정적
+### 테스트 현황
 
-## 5. 개발 환경 & 실행 방법
-- JDK 21, Gradle Wrapper 사용
-- H2 인메모리 DB 기본 실행(필요 시 schema/data/migration 구성 변경 가능)
+| 레이어 | 테스트 파일 | 테스트 수 |
+|--------|-------------|-----------|
+| Domain | FeeCalculatorTest | 2 |
+| Application | PaymentServiceTest | 6 |
+| Application | QueryPaymentsServiceTest | 14 |
+| Infrastructure | PaymentRepositoryPagingTest | 8 |
+| Infrastructure | FeePolicyPersistenceAdapterTest | 3 |
+| External | TestPgClientTest | 6 |
+| External | AesGcmCryptoTest | 5 |
+| API | GlobalExceptionHandlerTest | 8 |
+| API | PaymentApiIntegrationTest | 17 |
+| **합계** | **9개 파일** | **69개** |
 
-명령어
+---
+
+## 기술 스택
+
+| 구분         | 기술                                  |
+| ------------ | ------------------------------------- |
+| Language     | Kotlin, JDK 22 (빌드), JDK 21+ (실행) |
+| Framework    | Spring Boot 3.4                       |
+| Architecture | 헥사고널 (멀티모듈)                   |
+| Database     | MariaDB (운영), H2 (테스트)           |
+| Migration    | Flyway                                |
+| API 문서     | Swagger (springdoc-openapi)           |
+
+## 프로젝트 구조
+
+```
+modules/
+├── domain/           # 순수 도메인 모델 (프레임워크 의존 없음)
+├── application/      # 유스케이스, 포트 정의
+├── infrastructure/
+│   └── persistence/  # JPA 엔티티, 리포지토리 어댑터
+├── external/
+│   └── pg-client/    # PG 연동 어댑터 (Mock, TestPG)
+└── bootstrap/
+    └── api-payment-gateway/  # Spring Boot API 모듈
+```
+
+## 실행 방법
+
+### 사전 요구사항
+
+- JDK 22 (빌드용)
+- Docker (MariaDB 실행용)
+
+### 환경 설정
+
 ```bash
-./gradlew build                  # 컴파일 + 모든 테스트
-./gradlew test                   # 테스트만
-./gradlew :modules:bootstrap:api-payment-gateway:bootRun   # API 실행
-./gradlew ktlintCheck | ktlintFormat  # 코드 스타일 검사/자동정렬
+cp .env.example .env
+# .env 파일에서 환경변수 수정
 ```
-기본 포트: 8080
 
-## 6. API 사양(요약)
-1) 결제 생성
+### 데이터베이스 실행
+
+```bash
+docker-compose up -d
 ```
-POST /api/v1/payments
+
+### 빌드 및 테스트
+
+```bash
+./gradlew build          # 컴파일 + 모든 테스트
+./gradlew test           # 테스트만
+./gradlew ktlintFormat   # 코드 스타일 자동정렬
+```
+
+### 애플리케이션 실행
+
+```bash
+./gradlew :modules:bootstrap:api-payment-gateway:bootRun
+```
+
+기본 포트: **8080**
+
+## 데이터베이스 스키마
+
+| 테이블               | 설명                                                            |
+| -------------------- | --------------------------------------------------------------- |
+| `partner`            | 제휴사 정보 (id, code, name, active)                            |
+| `partner_fee_policy` | 수수료 정책 (partner_id, effective_from, percentage, fixed_fee) |
+| `payment`            | 결제 내역 (금액, 수수료, 승인정보, 상태 등)                     |
+
+스키마 상세: `db/migration/V1__init.sql`
+
+---
+
+## 상세 문서
+
+| 문서                                                 | 설명                           |
+| ---------------------------------------------------- | ------------------------------ |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)              | 모듈 구조 및 헥사고널 아키텍처 |
+| [PAYMENT_FLOW.md](docs/payment/flow/PAYMENT_FLOW.md) | 결제 생성 흐름 상세            |
+| [PG 클라이언트 문서](docs/payment/pg/)               | MockPG, TestPG 연동 가이드     |
+| [테스트 문서](docs/testing/)                         | 테스트 코드 문서               |
+| [REQUIREMENTS.md](docs/REQUIREMENTS.md)              | 원본 과제 요구사항             |
+
+## 환경 변수
+
+### 데이터베이스 (MariaDB)
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `DB_URL` | JDBC 접속 URL | `jdbc:mariadb://localhost:3306/pgdb` |
+| `DB_USERNAME` | DB 사용자명 | `pguser` |
+| `DB_PASSWORD` | DB 비밀번호 | `pgpass` |
+
+### TestPG 연동 (선택)
+
+| 변수 | 설명 | 기본값 (테스트용) |
+|------|------|-------------------|
+| `TEST_PG_BASE_URL` | TestPG API 주소 | `https://api-test-pg.bigs.im` |
+| `TEST_PG_API_KEY` | 인증 키 (UUID) | `11111111-1111-4111-8111-111111111111` |
+| `TEST_PG_IV` | 암호화 IV (Base64URL) | `AAAAAAAAAAAAAAAA` |
+
+### Docker Compose (선택)
+
+| 변수 | 설명 | 기본값 |
+|------|------|--------|
+| `MARIADB_ROOT_PASSWORD` | root 비밀번호 | `rootpass` |
+| `MARIADB_DATABASE` | 데이터베이스명 | `pgdb` |
+| `MARIADB_USER` | 사용자명 | `pguser` |
+| `MARIADB_PASSWORD` | 비밀번호 | `pgpass` |
+| `MARIADB_PORT` | 포트 | `3306` |
+
+> 💡 `.env.example`을 `.env`로 복사 후 필요에 따라 수정하세요.
+
+## API 문서
+
+Swagger UI: http://localhost:8080/swagger-ui.html
+
+---
+
+## API 사양
+
+### 1. 결제 생성
+
+**엔드포인트:** `POST /api/v1/payments`
+
+**요청 예시 (MockPG - partnerId: 1):**
+
+```json
 {
   "partnerId": 1,
   "amount": 10000,
-  "cardBin": "123456",
-  "cardLast4": "4242",
-  "productName": "샘플"
+  "pgCardData": {
+    "type": "MOCK",
+    "cardBin": "123456",
+    "cardLast4": "4242"
+  }
 }
+```
 
-200 OK
+**요청 예시 (TestPG - partnerId: 2):**
+
+```json
+{
+  "partnerId": 2,
+  "amount": 10000,
+  "pgCardData": {
+    "type": "TEST_PG",
+    "cardNumber": "1111-1111-1111-1111",
+    "birthDate": "19900101",
+    "expiry": "1227",
+    "cardPassword": "12"
+  }
+}
+```
+
+**성공 응답 (200 OK):**
+
+```json
 {
   "id": 99,
   "partnerId": 1,
   "amount": 10000,
-  "appliedFeeRate": 0.0300,
+  "appliedFeeRate": 0.03,
   "feeAmount": 400,
   "netAmount": 9600,
   "cardLast4": "4242",
-  "approvalCode": "...",
-  "approvedAt": "2025-01-01T00:00:00Z",
+  "approvalCode": "10080728",
+  "approvedAt": "2025-01-27 10:00:00",
   "status": "APPROVED",
-  "createdAt": "2025-01-01T00:00:00Z"
+  "failureCode": null,
+  "failureMessage": null,
+  "failedAt": null,
+  "createdAt": "2025-01-27 10:00:00"
 }
 ```
 
-2) 결제 조회(통계+커서)
-```
-GET /api/v1/payments?partnerId=1&status=APPROVED&from=2025-01-01T00:00:00Z&to=2025-01-02T00:00:00Z&limit=20&cursor=
+**에러 응답:**
 
-200 OK
+모든 에러 응답은 동일한 `ErrorResponse` 형식을 따릅니다:
+
+```json
 {
-  "items": [ { ... }, ... ],
-  "summary": { "count": 35, "totalAmount": 35000, "totalNetAmount": 33950 },
-  "nextCursor": "ey1...",
+  "code": "에러_코드",
+  "message": "에러 상세 메시지",
+  "timestamp": "2025-01-27T10:00:00Z"
+}
+```
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|-----------|-----------|------|
+| 400 | `PARTNER_INACTIVE` | 비활성 제휴사로 결제 시도 |
+| 400 | `INVALID_PG_CARD_DATA` | 카드 데이터 형식 오류 |
+| 400 | `PG_CLIENT_NOT_FOUND` | 제휴사에 맞는 PG 클라이언트 없음 |
+| 400 | `VALIDATION_FAILED` | 요청 필드 검증 실패 |
+| 404 | `PARTNER_NOT_FOUND` | 존재하지 않는 제휴사 |
+| 422 | `PG_REJECTED` | PG에서 결제 거절 (한도 초과 등) |
+| 500 | `FEE_POLICY_NOT_FOUND` | 수수료 정책 없음 |
+| 500 | `PG_AUTH_FAILED` | PG 인증 실패 (API KEY 오류) |
+| 502 | `PG_SERVER_ERROR` | 외부 PG 서버 장애 |
+
+**에러 응답 예시:**
+
+400 Bad Request (비활성 제휴사):
+```json
+{
+  "code": "PARTNER_INACTIVE",
+  "message": "제휴사가 비활성 상태입니다: partnerId=3",
+  "timestamp": "2025-01-27T10:00:00Z"
+}
+```
+
+404 Not Found (제휴사 없음):
+```json
+{
+  "code": "PARTNER_NOT_FOUND",
+  "message": "제휴사를 찾을 수 없습니다: partnerId=999",
+  "timestamp": "2025-01-27T10:00:00Z"
+}
+```
+
+422 Unprocessable Entity (PG 거절):
+```json
+{
+  "code": "PG_REJECTED",
+  "message": "결제가 거절되었습니다: 한도 초과 (ref: ref-123)",
+  "timestamp": "2025-01-27T10:00:00Z"
+}
+```
+
+500 Internal Server Error (수수료 정책 없음):
+```json
+{
+  "code": "FEE_POLICY_NOT_FOUND",
+  "message": "수수료 정책을 찾을 수 없습니다: partnerId=1",
+  "timestamp": "2025-01-27T10:00:00Z"
+}
+```
+
+---
+
+### 2. 결제 조회 (통계 + 커서 페이지네이션)
+
+**엔드포인트:** `GET /api/v1/payments`
+
+**쿼리 파라미터:**
+| 파라미터 | 타입 | 필수 | 설명 |
+|---------|------|------|------|
+| partnerId | Long | N | 제휴사 ID |
+| status | String | N | 결제 상태 (APPROVED, REJECTED) |
+| from | ISO DateTime | N | 조회 시작 시각 |
+| to | ISO DateTime | N | 조회 종료 시각 |
+| cursor | String | N | 페이지네이션 커서 |
+| limit | Int | N | 페이지 크기 (기본 20) |
+
+**요청 예시:**
+
+```
+GET /api/v1/payments?partnerId=1&status=APPROVED&from=2025-01-01T00:00:00Z&to=2025-01-31T23:59:59Z&limit=20
+```
+
+**응답 (200 OK):**
+
+```json
+{
+  "items": [
+    {
+      "id": 99,
+      "partnerId": 1,
+      "amount": 10000,
+      "appliedFeeRate": 0.03,
+      "feeAmount": 400,
+      "netAmount": 9600,
+      "cardLast4": "4242",
+      "approvalCode": "10080728",
+      "approvedAt": "2025-01-27 10:00:00",
+      "status": "APPROVED",
+      "createdAt": "2025-01-27 10:00:00"
+    }
+  ],
+  "summary": {
+    "count": 35,
+    "totalAmount": 350000,
+    "totalNetAmount": 339500
+  },
+  "nextCursor": "eyJjcmVhdGVkQXQiOi4uLn0=",
   "hasNext": true
 }
 ```
 
-## 7. 데이터베이스 가이드
-- 기준 테이블(예시):
-  - `partner(id, code, name, active)`
-  - `partner_fee_policy(id, partner_id, effective_from, percentage, fixed_fee)`
-  - `payment(id, partner_id, amount, applied_fee_rate, fee_amount, net_amount, card_bin, card_last4, approval_code, approved_at, status, created_at, updated_at)`
-- 인덱스 권장: `payment(created_at desc, id desc)`, `payment(partner_id, created_at desc)`, 검색 조건 컬럼
-- 정확한 스키마/인덱스는 요구사항을 만족하는 선에서 자유롭게 보완 가능
+**정렬 기준:** `createdAt DESC, id DESC`
 
-## 8. 제출물
-- github 저장소 링크를 사전과제 전달 메일로 회신. (메일 본문에 채용공고 명 / 실명 기재 필수)
-- 포함 사항: 구현 코드, 테스트, 간단 사용가이드(필요 시 README 보강), 변경이력, 추가 선택 구현 설명(선택)
-
-## 9. 평가 기준
-- 아키텍처 일관성(모듈 경계, 포트-어댑터, 의존 역전)
-- 도메인 모델링 적절성 및 가독성(KDoc, 네이밍)
-- 기능 정확성(통계 일치, 커서 페이징 동작, 수수료 계산)
-- 테스트 품질(결정적/빠름/커버리지)
-- 보안/개인정보 처리(민감정보 최소 저장, 로깅 배제)
-- 변경 이력 품질(의미 있는 커밋 메시지, 작은 단위 변경)
-
-## 10. 선택 과제(가산점)
-- 추가 제휴사 연동(Adapter 추가 및 전략 선택)
-- 오픈API 문서화(springdoc 등) 또는 간단한 운영지표(로그/메트릭)
-- MariaDB 등 외부 DB로 전환(docker-compose 포함) 및 마이그레이션 도구 적용
-
-## 11. 참고자료
-- [과제 내 연동 대상 API 문서](https://api-test-pg.bigs.im/docs/index.html)
-
-## 12. 주의사항
-- 전달한 본 프로젝트는 정상동작하지 않습니다. 요구사항을 포함해, 정상 동작을 목표로 진행하세요.
-- 본 과제와 관련한 어떠한 질문도 받지 않습니다.
-- 제출물을 기준으로 면접시 코드리뷰를 진행합니다. 이를 고려해주세요. 
-
-행운을 빕니다. 읽기 쉬운 코드, 일관된 설계, 신뢰할 수 있는 테스트를 기대합니다.
+---
