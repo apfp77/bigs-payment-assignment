@@ -7,6 +7,7 @@ import im.bigs.pg.api.payment.dto.QueryResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -72,11 +73,29 @@ interface PaymentControllerDocs {
                 [
                     Content(
                         mediaType = "application/json",
-                        schema =
-                        Schema(
-                            implementation =
-                            ErrorResponse::class
-                        )
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "비활성 제휴사",
+                                summary = "PARTNER_INACTIVE",
+                                value = """{"code": "PARTNER_INACTIVE", "message": "제휴사가 비활성 상태입니다: partnerId=3", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            ),
+                            ExampleObject(
+                                name = "카드 데이터 오류",
+                                summary = "INVALID_PG_CARD_DATA",
+                                value = """{"code": "INVALID_PG_CARD_DATA", "message": "카드 데이터 형식이 올바르지 않습니다", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            ),
+                            ExampleObject(
+                                name = "PG 클라이언트 없음",
+                                summary = "PG_CLIENT_NOT_FOUND",
+                                value = """{"code": "PG_CLIENT_NOT_FOUND", "message": "제휴사에 맞는 PG 클라이언트를 찾을 수 없습니다: partnerId=1", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            ),
+                            ExampleObject(
+                                name = "검증 실패",
+                                summary = "VALIDATION_FAILED",
+                                value = """{"code": "VALIDATION_FAILED", "message": "partnerId: must not be null; amount: must be greater than 0", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            )
+                        ]
                     )
                 ]
             ),
@@ -87,11 +106,14 @@ interface PaymentControllerDocs {
                 [
                     Content(
                         mediaType = "application/json",
-                        schema =
-                        Schema(
-                            implementation =
-                            ErrorResponse::class
-                        )
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "제휴사 없음",
+                                summary = "PARTNER_NOT_FOUND",
+                                value = """{"code": "PARTNER_NOT_FOUND", "message": "제휴사를 찾을 수 없습니다: partnerId=999", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            )
+                        ]
                     )
                 ]
             ),
@@ -102,11 +124,19 @@ interface PaymentControllerDocs {
                 [
                     Content(
                         mediaType = "application/json",
-                        schema =
-                        Schema(
-                            implementation =
-                            ErrorResponse::class
-                        )
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "한도 초과",
+                                summary = "PG_REJECTED - 한도 초과",
+                                value = """{"code": "PG_REJECTED", "message": "결제가 거절되었습니다: 한도 초과 (ref: ref-123)", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            ),
+                            ExampleObject(
+                                name = "분실 카드",
+                                summary = "PG_REJECTED - 분실 카드",
+                                value = """{"code": "PG_REJECTED", "message": "결제가 거절되었습니다: 분실 신고된 카드입니다 (ref: ref-456)", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            )
+                        ]
                     )
                 ]
             ),
@@ -118,11 +148,19 @@ interface PaymentControllerDocs {
                 [
                     Content(
                         mediaType = "application/json",
-                        schema =
-                        Schema(
-                            implementation =
-                            ErrorResponse::class
-                        )
+                        schema = Schema(implementation = ErrorResponse::class),
+                        examples = [
+                            ExampleObject(
+                                name = "수수료 정책 없음",
+                                summary = "FEE_POLICY_NOT_FOUND",
+                                value = """{"code": "FEE_POLICY_NOT_FOUND", "message": "수수료 정책을 찾을 수 없습니다: partnerId=1", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            ),
+                            ExampleObject(
+                                name = "PG 인증 실패",
+                                summary = "PG_AUTH_FAILED",
+                                value = """{"code": "PG_AUTH_FAILED", "message": "PG 인증에 실패했습니다: Invalid API Key", "timestamp": "2025-01-27T10:00:00Z"}"""
+                            )
+                        ]
                     )
                 ]
             ),
