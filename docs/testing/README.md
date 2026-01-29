@@ -8,9 +8,9 @@
 | ----------------------------------- | ---------------------- | --------- |
 | [Domain](./domain/)                 | 수수료 계산기          | 2개       |
 | [External](./external/)             | PG 클라이언트, 암호화  | 9개       |
-| [Infrastructure](./infrastructure/) | 레포지토리, 어댑터     | 4개       |
-| [Application](./application/)       | 결제/조회 서비스       | 13개      |
-| [API](./api/)                       | 예외 처리, 통합 테스트 | 13개      |
+| [Infrastructure](./infrastructure/) | 레포지토리, 어댑터     | 8개       |
+| [Application](./application/)       | 결제/조회 서비스       | 19개      |
+| [API](./api/)                       | 예외 처리, 통합 테스트 | 19개      |
 
 ## 테스트 실행
 

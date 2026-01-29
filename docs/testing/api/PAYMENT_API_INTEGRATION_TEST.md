@@ -99,15 +99,81 @@
 
 ---
 
-### E2E 시나리오 테스트
-
-#### 9. 결제 생성 후 바로 조회할 수 있어야 한다
+#### 9. 결제 생성 후 바로 조회할 수 있어야 한다 (E2E)
 
 **시나리오**: 결제 생성 → 목록 조회
 
 **검증 항목**:
 
 - 생성한 결제가 목록에 포함
+
+---
+
+#### 10. status 필터로 APPROVED 상태만 조회해야 한다
+
+**검증 항목**:
+
+- 모든 항목의 status가 APPROVED
+
+---
+
+#### 11. 정렬 순서가 createdAt desc, id desc여야 한다
+
+**검증 항목**:
+
+- createdAt 내림차순 정렬
+- 같은 시간일 경우 id 내림차순
+
+---
+
+#### 12. 복합 필터로 조회해야 한다
+
+**시나리오**: partnerId + status 복합 필터
+
+**검증 항목**:
+
+- 필터 조건에 맞는 항목만 반환
+- summary도 동일 조건으로 집계
+
+---
+
+#### 13. 빈 결과 조회 시 빈 목록과 0 통계를 반환해야 한다
+
+**시나리오**: 존재하지 않는 partnerId=99999
+
+**검증 항목**:
+
+- items.size: 0
+- summary.count: 0
+- summary.totalAmount: 0
+- summary.totalNetAmount: 0
+- hasNext: false
+- nextCursor: null
+
+---
+
+#### 14. limit=1로 조회 시 한 건만 반환해야 한다
+
+**시나리오**: 5건 생성 후 limit=1 조회
+
+**검증 항목**:
+
+- items.size: 1
+- summary.count: 5 (전체)
+- hasNext: true
+
+---
+
+#### 15. summary는 필터와 동일한 조건으로 집계되어야 한다
+
+**시나리오**: 5건 생성 (각 2000원), partnerId 필터 + limit=2
+
+**검증 항목**:
+
+- items.size: 2 (2건만 반환)
+- summary.count: 5 (전체)
+- summary.totalAmount: 10000 (2000 * 5)
+- hasNext: true
 
 ---
 
