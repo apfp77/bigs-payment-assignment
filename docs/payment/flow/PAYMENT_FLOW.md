@@ -270,10 +270,52 @@ flowchart TD
     H -->|No| I[PgClientNotFoundException → 400]
     H -->|Yes| J{pgCardData 타입 일치?}
     J -->|No| K[InvalidPgCardDataException → 400]
-    J -->|Yes| L{PG 승인 성공?}
-    L -->|No| M[PgRejectedException → 422]
-    L -->|Yes| N[결제 저장 → 200 OK]
+    J -->|Yes| L{PG 승인 요청}
+    L -->|인증 실패| M1[PgAuthenticationException → 500]
+    L -->|결제 거절| M2[실패 결제 DB 저장 → PgRejectedException → 422]
+    L -->|서버 오류| M3[PgServerException → 502]
+    L -->|성공| N[결제 저장 → 200 OK]
 ```
+
+## 결제 실패 기록
+
+`PgRejectedException` 발생 시, 실패 결제도 DB에 기록됩니다:
+
+```kotlin
+} catch (e: PgRejectedException) {
+    // 실패 결제 저장
+    val failedPayment = Payment(
+        partnerId = partner.id,
+        amount = command.amount,
+        appliedFeeRate = policy.percentage,
+        feeAmount = BigDecimal.ZERO,
+        netAmount = BigDecimal.ZERO,
+        status = PaymentStatus.REJECTED,
+        failureCode = e.errorCode,
+        failureMessage = e.message,
+        failedAt = LocalDateTime.now(),
+    )
+    paymentRepository.save(failedPayment)
+    throw e // 422 응답 유지
+}
+```
+
+### Payment 도메인 필드
+
+| 필드             | 성공 시       | 실패 시 (REJECTED) |
+| ---------------- | ------------- | ------------------ |
+| `status`         | `APPROVED`    | `REJECTED`         |
+| `approvalCode`   | PG 승인 코드  | `null`             |
+| `approvedAt`     | 승인 시각     | `null`             |
+| `failureCode`    | `null`        | PG 에러 코드       |
+| `failureMessage` | `null`        | PG 에러 메시지     |
+| `failedAt`       | `null`        | 실패 시각          |
+| `feeAmount`      | 계산된 수수료 | `0`                |
+| `netAmount`      | 계산된 정산금 | `0`                |
+
+> [!NOTE]
+> `PgAuthenticationException`과 `PgServerException`은 결제 시도가 아닌 시스템 오류로 간주되어 DB에 저장하지 않습니다.
+> 향후 알림 시스템 연동이 필요합니다 (TODO).
 
 ## 관련 파일
 
