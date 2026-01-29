@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  mariadb:
+    image: ${MARIADB_IMAGE:mariadb:10.11}
+    container_name: ${MARIADB_CONTAINER_NAME:pg-mariadb}
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:rootpass}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:pgdb}
+      MARIADB_USER: ${MARIADB_USER:pguser}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:pgpass}
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    volumes:
+      - ${MARIADB_DATA_VOLUME:-mariadb-data}:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  mariadb-data:

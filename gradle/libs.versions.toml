@@ -5,6 +5,8 @@ junit-platform = "1.10.2"
 fixture = "1.2.0"
 springdoc = "2.8.4"
 wiremock = "3.3.1"
+flyway = "9.22.3"
+mariadb = "3.3.2"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
@@ -23,13 +25,15 @@ spring-context = { module = "org.springframework:spring-context" }
 spring-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 database-h2 = { module = "com.h2database:h2" }
-database-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client" }
 
 test-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 test-fixture = { module = "com.appmattus.fixture:fixture", version.ref = "fixture" }
 test-wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-mariadb = { module = "org.flywaydb:flyway-mysql", version.ref = "flyway" }
+mariadb-client = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
 
 [bundles]
 jackson = [

@@ -14,6 +14,9 @@ dependencies {
     implementation(libs.spring.boot.starter.jpa)
     implementation(libs.bundles.bootstrap)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.mariadb)
+    runtimeOnly(libs.mariadb.client)
     testImplementation(libs.bundles.test)
     testImplementation(libs.spring.boot.starter.test) {
         exclude(module = "mockito-core")
