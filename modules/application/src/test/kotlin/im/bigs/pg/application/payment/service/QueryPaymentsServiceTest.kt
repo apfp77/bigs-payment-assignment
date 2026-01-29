@@ -100,6 +100,133 @@ class QueryPaymentsServiceTest {
         assertEquals(1, result.items.size)
     }
 
+    @Test
+    @DisplayName("from, to 기간 필터로 해당 기간만 조회해야 한다")
+    fun `from, to 기간 필터로 해당 기간만 조회해야 한다`() {
+        val from = LocalDateTime.of(2025, 1, 1, 0, 0)
+        val to = LocalDateTime.of(2025, 1, 31, 23, 59, 59)
+
+        every { paymentRepo.findBy(match { it.from == from && it.to == to }) } returns
+            PaymentPage(
+                items = listOf(createPayment(1L)),
+                hasNext = false,
+                nextCursorCreatedAt = null,
+                nextCursorId = null,
+            )
+        every { paymentRepo.summary(match { it.from == from && it.to == to }) } returns
+            PaymentSummaryProjection(
+                count = 1L,
+                totalAmount = BigDecimal("1000"),
+                totalNetAmount = BigDecimal("976"),
+            )
+
+        val result = service.query(QueryFilter(from = from, to = to))
+
+        assertEquals(1, result.items.size)
+        assertEquals(1L, result.summary.count)
+    }
+
+    @Test
+    @DisplayName("from만 있는 경우 해당 시점 이후 데이터만 조회해야 한다")
+    fun `from만 있는 경우 해당 시점 이후 데이터만 조회해야 한다`() {
+        val from = LocalDateTime.of(2025, 1, 15, 0, 0)
+
+        every { paymentRepo.findBy(match { it.from == from && it.to == null }) } returns
+            PaymentPage(
+                items = listOf(createPayment(1L), createPayment(2L)),
+                hasNext = false,
+                nextCursorCreatedAt = null,
+                nextCursorId = null,
+            )
+        every { paymentRepo.summary(match { it.from == from && it.to == null }) } returns
+            PaymentSummaryProjection(
+                count = 2L,
+                totalAmount = BigDecimal("2000"),
+                totalNetAmount = BigDecimal("1952"),
+            )
+
+        val result = service.query(QueryFilter(from = from))
+
+        assertEquals(2, result.items.size)
+        assertEquals(2L, result.summary.count)
+    }
+
+    @Test
+    @DisplayName("to만 있는 경우 해당 시점 이전 데이터만 조회해야 한다")
+    fun `to만 있는 경우 해당 시점 이전 데이터만 조회해야 한다`() {
+        val to = LocalDateTime.of(2025, 1, 15, 0, 0)
+
+        every { paymentRepo.findBy(match { it.from == null && it.to == to }) } returns
+            PaymentPage(
+                items = listOf(createPayment(1L)),
+                hasNext = false,
+                nextCursorCreatedAt = null,
+                nextCursorId = null,
+            )
+        every { paymentRepo.summary(match { it.from == null && it.to == to }) } returns
+            PaymentSummaryProjection(
+                count = 1L,
+                totalAmount = BigDecimal("1000"),
+                totalNetAmount = BigDecimal("976"),
+            )
+
+        val result = service.query(QueryFilter(to = to))
+
+        assertEquals(1, result.items.size)
+        assertEquals(1L, result.summary.count)
+    }
+
+    @Test
+    @DisplayName("복합 필터 조합으로 조회해야 한다")
+    fun `복합 필터 조합으로 조회해야 한다`() {
+        val from = LocalDateTime.of(2025, 1, 1, 0, 0)
+        val to = LocalDateTime.of(2025, 1, 31, 23, 59, 59)
+
+        every {
+            paymentRepo.findBy(
+                match {
+                    it.partnerId == 1L &&
+                        it.status == PaymentStatus.APPROVED &&
+                        it.from == from &&
+                        it.to == to
+                }
+            )
+        } returns
+            PaymentPage(
+                items = listOf(createPayment(1L)),
+                hasNext = false,
+                nextCursorCreatedAt = null,
+                nextCursorId = null,
+            )
+        every {
+            paymentRepo.summary(
+                match {
+                    it.partnerId == 1L &&
+                        it.status == PaymentStatus.APPROVED &&
+                        it.from == from &&
+                        it.to == to
+                }
+            )
+        } returns
+            PaymentSummaryProjection(
+                count = 1L,
+                totalAmount = BigDecimal("1000"),
+                totalNetAmount = BigDecimal("976"),
+            )
+
+        val result = service.query(
+            QueryFilter(
+                partnerId = 1L,
+                status = "APPROVED",
+                from = from,
+                to = to,
+            )
+        )
+
+        assertEquals(1, result.items.size)
+        assertEquals(1L, result.summary.count)
+    }
+
     // ==================== 페이지네이션 테스트 ====================
 
     @Test
@@ -207,6 +334,51 @@ class QueryPaymentsServiceTest {
         val result = service.query(QueryFilter(cursor = "invalid_cursor_format"))
 
         assertEquals(1, result.items.size)
+    }
+
+    // ==================== 경계값 테스트 ====================
+
+    @Test
+    @DisplayName("빈 결과 조회 시 빈 목록과 0 통계를 반환해야 한다")
+    fun `빈 결과 조회 시 빈 목록과 0 통계를 반환해야 한다`() {
+        every { paymentRepo.findBy(any()) } returns
+            PaymentPage(
+                items = emptyList(),
+                hasNext = false,
+                nextCursorCreatedAt = null,
+                nextCursorId = null,
+            )
+        every { paymentRepo.summary(any()) } returns
+            PaymentSummaryProjection(0L, BigDecimal.ZERO, BigDecimal.ZERO)
+
+        val result = service.query(QueryFilter(partnerId = 999L))
+
+        assertEquals(0, result.items.size)
+        assertEquals(0L, result.summary.count)
+        assertEquals(BigDecimal.ZERO, result.summary.totalAmount)
+        assertEquals(BigDecimal.ZERO, result.summary.totalNetAmount)
+        assertFalse(result.hasNext)
+        assertNull(result.nextCursor)
+    }
+
+    @Test
+    @DisplayName("limit=1로 조회 시 한 건만 반환해야 한다")
+    fun `limit=1로 조회 시 한 건만 반환해야 한다`() {
+        every { paymentRepo.findBy(match { it.limit == 1 }) } returns
+            PaymentPage(
+                items = listOf(createPayment(1L)),
+                hasNext = true,
+                nextCursorCreatedAt = LocalDateTime.now(),
+                nextCursorId = 1L,
+            )
+        every { paymentRepo.summary(any()) } returns
+            PaymentSummaryProjection(10L, BigDecimal("10000"), BigDecimal("9760"))
+
+        val result = service.query(QueryFilter(limit = 1))
+
+        assertEquals(1, result.items.size)
+        assertEquals(10L, result.summary.count)
+        assertTrue(result.hasNext)
     }
 
     // ==================== 헬퍼 함수 ====================

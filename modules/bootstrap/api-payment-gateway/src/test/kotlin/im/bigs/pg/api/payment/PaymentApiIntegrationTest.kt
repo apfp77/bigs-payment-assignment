@@ -319,6 +319,152 @@ class PaymentApiIntegrationTest {
         response.body!!.items.forEach { assertEquals(testPartnerId, it.partnerId) }
     }
 
+    @Test
+    @Order(10)
+    @DisplayName("status 필터로 APPROVED 상태만 조회해야 한다")
+    fun `status 필터로 APPROVED 상태만 조회해야 한다`() {
+        // Given: 결제 생성 (모두 APPROVED)
+        repeat(3) { createPayment() }
+
+        // When
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?status=APPROVED",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(3, response.body!!.items.size)
+        response.body!!.items.forEach { assertEquals("APPROVED", it.status.name) }
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("정렬 순서가 createdAt desc, id desc여야 한다")
+    fun `정렬 순서가 createdAt desc, id desc여야 한다`() {
+        // Given: 여러 건 생성
+        repeat(5) { createPayment() }
+
+        // When
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?limit=10",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        val items = response.body!!.items
+        for (i in 0 until items.size - 1) {
+            // createdAt이 같거나 더 큰지 확인 (desc)
+            assertTrue(
+                items[i].createdAt!! >= items[i + 1].createdAt!!,
+                "createdAt은 내림차순이어야 함"
+            )
+            // createdAt이 같으면 id로 비교
+            if (items[i].createdAt == items[i + 1].createdAt) {
+                assertTrue(
+                    items[i].id!! > items[i + 1].id!!,
+                    "같은 시간일 때 ID는 내림차순이어야 함"
+                )
+            }
+        }
+    }
+
+    @Test
+    @Order(12)
+    @DisplayName("복합 필터로 조회해야 한다")
+    fun `복합 필터로 조회해야 한다`() {
+        // Given: 결제 생성
+        repeat(3) { createPayment() }
+
+        // When: partnerId + status 복합 필터
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?partnerId=$testPartnerId&status=APPROVED",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(3, response.body!!.items.size)
+        assertEquals(3L, response.body!!.summary.count)
+    }
+
+    @Test
+    @Order(13)
+    @DisplayName("빈 결과 조회 시 빈 목록과 0 통계를 반환해야 한다")
+    fun `빈 결과 조회 시 빈 목록과 0 통계를 반환해야 한다`() {
+        // Given: 아무 데이터도 없음 (BeforeEach에서 삭제됨)
+
+        // When: 존재하지 않는 partnerId로 조회
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?partnerId=99999",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        response.body!!.let {
+            assertEquals(0, it.items.size)
+            assertEquals(0L, it.summary.count)
+            assertEquals(BigDecimal.ZERO, it.summary.totalAmount)
+            assertEquals(BigDecimal.ZERO, it.summary.totalNetAmount)
+            assertFalse(it.hasNext)
+            assertNull(it.nextCursor)
+        }
+    }
+
+    @Test
+    @Order(14)
+    @DisplayName("limit=1로 조회 시 한 건만 반환해야 한다")
+    fun `limit=1로 조회 시 한 건만 반환해야 한다`() {
+        // Given: 5건 생성
+        repeat(5) { createPayment() }
+
+        // When
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?limit=1",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        response.body!!.let {
+            assertEquals(1, it.items.size)
+            assertEquals(5L, it.summary.count) // 전체 통계
+            assertTrue(it.hasNext)
+            assertNotNull(it.nextCursor)
+        }
+    }
+
+    @Test
+    @Order(15)
+    @DisplayName("summary는 필터와 동일한 조건으로 집계되어야 한다")
+    fun `summary는 필터와 동일한 조건으로 집계되어야 한다`() {
+        // Given: 5건 생성 (각 2000원)
+        repeat(5) { createPayment(amount = BigDecimal("2000")) }
+
+        // When: partnerId 필터 + limit=2
+        val response =
+            restTemplate.getForEntity(
+                "/api/v1/payments?partnerId=$testPartnerId&limit=2",
+                QueryResponse::class.java,
+            )
+
+        // Then
+        assertEquals(HttpStatus.OK, response.statusCode)
+        response.body!!.let {
+            assertEquals(2, it.items.size) // 2건만 반환
+            assertEquals(5L, it.summary.count) // 전체 5건 집계
+            assertEquals(BigDecimal("10000"), it.summary.totalAmount) // 2000 * 5
+            assertTrue(it.hasNext)
+        }
+    }
+
     // ==================== E2E 시나리오 테스트 ====================
 
     @Test
