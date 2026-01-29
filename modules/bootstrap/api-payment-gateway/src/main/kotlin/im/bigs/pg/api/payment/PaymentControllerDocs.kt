@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
 import java.time.LocalDateTime
 
@@ -137,7 +138,7 @@ interface PaymentControllerDocs {
             )
         ]
     )
-    fun create(req: CreatePaymentRequest): ResponseEntity<PaymentResponse>
+    fun create(@Valid req: CreatePaymentRequest): ResponseEntity<PaymentResponse>
 
     /**
      * 결제 이력을 조회합니다.
